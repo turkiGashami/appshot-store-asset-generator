@@ -2,21 +2,29 @@
 
 import { PRESETS, GROUPS, presetById } from './presets.js';
 import { THEMES, themeById } from './themes.js';
+import { LAYOUTS } from './layouts.js';
 import { render, loadImage, fileToDataURL, ensureFontsReady } from './renderer.js';
 import { exportAll, exportSingle } from './export.js';
 
 // ---------- الحالة ----------
+// كل سكرينشوت له إعداداته الخاصة (عنوان/ثيم/تخطيط) ليختلف عن بقية الصفحات.
 const state = {
-  shots: [], // [{ name, img }]
-  logo: null, // img
-  title: '',
-  themeId: THEMES[1].id, // بنّي افتراضيًا
-  platform: 'ios',
-  showFrame: true,
+  shots: [], // [{ name, img, title, themeId, layoutId }]
+  defaults: { title: '', themeId: 'brown', layoutId: LAYOUTS[0].id },
+  logo: null,
+  platform: 'ios',          // مشترك للدفعة
+  statusBarRatio: 0.12,     // مشترك (تغطية شريط الحالة)
+  showFrame: true,          // مشترك
+  iconThemeId: 'purple',    // خلفية الأيقونات/الكفر (منفصلة عن الصور الوصفية)
   selected: new Set(PRESETS.filter((p) => p.defaultOn).map((p) => p.id)),
   previewShot: 0,
   previewPresetId: PRESETS.find((p) => p.type === 'screenshot').id,
 };
+
+// الهدف الذي تعدّله عناصر التحكم (الصورة المحددة، أو الإعدادات الافتراضية إن لم توجد صور).
+function activeTarget() {
+  return state.shots[state.previewShot] || state.defaults;
+}
 
 // ---------- عناصر DOM ----------
 const $ = (id) => document.getElementById(id);
@@ -25,6 +33,10 @@ const els = {
   logoInput: $('logoInput'),
   titleInput: $('titleInput'),
   themeSwatches: $('themeSwatches'),
+  iconThemeSwatches: $('iconThemeSwatches'),
+  layoutChips: $('layoutChips'),
+  statusBarRange: $('statusBarRange'),
+  statusBarVal: $('statusBarVal'),
   frameToggle: $('frameToggle'),
   presetsList: $('presetsList'),
   platformGroup: $('platformGroup'),
@@ -39,22 +51,37 @@ const els = {
   thumbs: $('thumbs'),
 };
 
-// ---------- بناء عناصر الواجهة الديناميكية ----------
-function buildThemes() {
-  els.themeSwatches.innerHTML = '';
+// ---------- بناة الواجهة الديناميكية ----------
+function buildSwatches(container, currentId, onPick) {
+  container.innerHTML = '';
   THEMES.forEach((t) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'swatch' + (t.id === state.themeId ? ' is-active' : '');
+    b.className = 'swatch' + (t.id === currentId() ? ' is-active' : '');
     b.title = t.label;
     b.style.background = t.swatch;
-    b.dataset.theme = t.id;
     b.addEventListener('click', () => {
-      state.themeId = t.id;
-      buildThemes();
+      onPick(t.id);
+      buildSwatches(container, currentId, onPick);
       renderPreview();
     });
-    els.themeSwatches.appendChild(b);
+    container.appendChild(b);
+  });
+}
+
+function buildLayouts() {
+  els.layoutChips.innerHTML = '';
+  LAYOUTS.forEach((l) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip' + (l.id === activeTarget().layoutId ? ' is-active' : '');
+    b.textContent = l.label;
+    b.addEventListener('click', () => {
+      activeTarget().layoutId = l.id;
+      buildLayouts();
+      renderPreview();
+    });
+    els.layoutChips.appendChild(b);
   });
 }
 
@@ -112,33 +139,46 @@ function buildThumbs() {
     d.addEventListener('click', () => {
       state.previewShot = i;
       buildThumbs();
+      syncControls();
       renderPreview();
     });
     els.thumbs.appendChild(d);
   });
 }
 
+// مزامنة عناصر التحكم (عنوان/ثيم/تخطيط) مع إعدادات الصورة المحددة.
+function syncControls() {
+  const t = activeTarget();
+  els.titleInput.value = t.title || '';
+  buildSwatches(els.themeSwatches, () => activeTarget().themeId, (id) => { activeTarget().themeId = id; });
+  buildLayouts();
+}
+
 // ---------- المعاينة ----------
-function currentConfig() {
-  return {
-    title: state.title,
-    theme: themeById(state.themeId),
-    platform: state.platform,
-    showFrame: state.showFrame,
-    logo: state.logo,
-  };
+function configFor(preset) {
+  if (preset.type === 'screenshot') {
+    const t = activeTarget();
+    return {
+      title: t.title,
+      theme: themeById(t.themeId),
+      layoutId: t.layoutId,
+      platform: state.platform,
+      statusBarRatio: state.statusBarRatio,
+      showFrame: state.showFrame,
+      logo: state.logo,
+      screenshot: state.shots[state.previewShot] ? state.shots[state.previewShot].img : null,
+    };
+  }
+  // أيقونة / كفر
+  return { theme: themeById(state.iconThemeId), logo: state.logo };
 }
 
 async function renderPreview() {
   await ensureFontsReady();
   const preset = presetById(state.previewPresetId);
-  const cfg = currentConfig();
-  const shot = state.shots[state.previewShot];
-  if (preset.type === 'screenshot') {
-    cfg.screenshot = shot ? shot.img : null;
-  }
+  const cfg = configFor(preset);
   const hasContent =
-    (preset.type === 'screenshot' && shot) ||
+    (preset.type === 'screenshot' && cfg.screenshot) ||
     (preset.type !== 'screenshot' && state.logo);
   els.emptyHint.hidden = hasContent;
   els.previewCanvas.style.visibility = hasContent ? 'visible' : 'hidden';
@@ -159,13 +199,14 @@ els.shotsInput.addEventListener('change', async (e) => {
     try {
       const url = await fileToDataURL(f);
       const img = await loadImage(url);
-      state.shots.push({ name: f.name, img });
+      state.shots.push({ name: f.name, img, ...state.defaults });
     } catch (err) {
       showError('تعذّر تحميل إحدى الصور: ' + f.name);
     }
   }
-  state.previewShot = 0;
+  state.previewShot = state.shots.length ? state.shots.length - files.length : 0;
   buildThumbs();
+  syncControls();
   renderPreview();
 });
 
@@ -183,7 +224,7 @@ els.logoInput.addEventListener('change', async (e) => {
 });
 
 els.titleInput.addEventListener('input', (e) => {
-  state.title = e.target.value;
+  activeTarget().title = e.target.value;
   renderPreview();
 });
 
@@ -192,6 +233,12 @@ els.platformGroup.addEventListener('change', (e) => {
     state.platform = e.target.value;
     renderPreview();
   }
+});
+
+els.statusBarRange.addEventListener('input', (e) => {
+  state.statusBarRatio = Number(e.target.value) / 100;
+  els.statusBarVal.textContent = e.target.value + '%';
+  renderPreview();
 });
 
 els.frameToggle.addEventListener('change', (e) => {
@@ -229,8 +276,20 @@ els.exportBtn.addEventListener('click', async () => {
   await ensureFontsReady();
   setBusy(true);
   try {
-    const shotsConfig = state.shots.map((s) => ({ screenshot: s.img }));
-    await exportAll(shotsConfig, [...state.selected], currentConfig(), (done, total) => {
+    const shotsConfig = state.shots.map((s) => ({
+      screenshot: s.img,
+      title: s.title,
+      theme: themeById(s.themeId),
+      layoutId: s.layoutId,
+    }));
+    const globalConfig = {
+      platform: state.platform,
+      statusBarRatio: state.statusBarRatio,
+      showFrame: state.showFrame,
+      logo: state.logo,
+    };
+    const iconConfig = { theme: themeById(state.iconThemeId), logo: state.logo };
+    await exportAll(shotsConfig, [...state.selected], globalConfig, iconConfig, (done, total) => {
       els.progress.hidden = false;
       els.progress.textContent = `جارٍ التصدير… ${done}/${total}`;
     });
@@ -248,8 +307,11 @@ function setBusy(busy) {
 }
 
 // ---------- التهيئة ----------
-buildThemes();
 buildPresets();
 buildPreviewPresetOptions();
 buildThumbs();
+buildSwatches(els.iconThemeSwatches, () => state.iconThemeId, (id) => { state.iconThemeId = id; });
+syncControls();
+els.statusBarRange.value = Math.round(state.statusBarRatio * 100);
+els.statusBarVal.textContent = Math.round(state.statusBarRatio * 100) + '%';
 renderPreview();

@@ -142,6 +142,42 @@ body {
   box-shadow: 0 6px 16px rgba(111, 0, 138, 0.24);
 }
 
+/* ---------- Section heads ---------- */
+.section-head {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent);
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  margin-top: 4px;
+}
+
+/* ---------- Chips (التخطيط) ---------- */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--panel-2);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.chip:hover { background: var(--brand-purple-tint); }
+.chip.is-active {
+  background: linear-gradient(180deg, var(--accent), var(--accent-2));
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(111, 0, 138, 0.22);
+}
+
+/* ---------- Range ---------- */
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+.range-val { font-style: normal; font-weight: 700; color: var(--accent); font-size: 12px; }
+
 /* ---------- Swatches (الثيم) ---------- */
 .swatches { display: flex; flex-wrap: wrap; gap: 10px; }
 .swatch {

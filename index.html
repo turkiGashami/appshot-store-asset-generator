@@ -44,17 +44,43 @@
         </div>
       </div>
 
+      <!-- إعدادات الصورة المحددة (لكل سكرينشوت تصميم خاص) -->
+      <div class="section-head">إعدادات الصورة المحددة</div>
+
       <!-- العنوان -->
       <label class="field">
         <span class="field__label">العنوان (نص فوق الصورة)</span>
         <input type="text" id="titleInput" placeholder="مثال: تسوّق بسهولة" dir="rtl" />
       </label>
 
-      <!-- الثيم -->
+      <!-- التخطيط -->
       <div class="field">
-        <span class="field__label">خلفية الثيم</span>
+        <span class="field__label">تخطيط الصفحة</span>
+        <div class="chips" id="layoutChips"></div>
+        <small class="field__hint">اختر تصميمًا مختلفًا لكل صورة لتنويع الصفحات.</small>
+      </div>
+
+      <!-- خلفية الصور الوصفية -->
+      <div class="field">
+        <span class="field__label">خلفية الصورة الوصفية</span>
         <div class="swatches" id="themeSwatches"></div>
       </div>
+
+      <!-- إعدادات عامة للدفعة -->
+      <div class="section-head">إعدادات عامة</div>
+
+      <!-- شريط الحالة: التغطية -->
+      <div class="field">
+        <span class="field__label">تغطية شريط الحالة <em id="statusBarVal" class="range-val">12%</em></span>
+        <input type="range" id="statusBarRange" min="5" max="20" step="1" value="12" />
+        <small class="field__hint">زِد القيمة حتى يغطّي شريط الحالة الأصلي بالكامل.</small>
+      </div>
+
+      <!-- إظهار الإطار -->
+      <label class="toggle">
+        <input type="checkbox" id="frameToggle" checked />
+        <span>إظهار إطار الجوال حول السكرينشوت</span>
+      </label>
 
       <!-- اللوجو -->
       <label class="field">
@@ -63,11 +89,12 @@
         <small class="field__hint">يفضّل PNG شفاف.</small>
       </label>
 
-      <!-- إظهار الإطار -->
-      <label class="toggle">
-        <input type="checkbox" id="frameToggle" checked />
-        <span>إظهار إطار الجوال حول السكرينشوت</span>
-      </label>
+      <!-- خلفية الأيقونة والكفر (منفصلة) -->
+      <div class="field">
+        <span class="field__label">خلفية الأيقونة والكفر</span>
+        <div class="swatches" id="iconThemeSwatches"></div>
+        <small class="field__hint">مستقلة عن خلفية الصور الوصفية.</small>
+      </div>
 
       <!-- الأحجام المطلوبة -->
       <div class="field">

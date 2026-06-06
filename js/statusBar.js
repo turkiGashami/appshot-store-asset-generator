@@ -10,14 +10,18 @@
 //
 // الأبعاد تُشتق من عرض الشاشة w لتكون متناسبة مع أي حجم مخرج.
 
-export function statusBarHeight(w, platform) {
-  // نسبة ارتفاع شريط الحالة من عرض الشاشة (تقريب عملي للأجهزة الحديثة).
-  return platform === 'android' ? Math.round(w * 0.06) : Math.round(w * 0.085);
+// نسبة الارتفاع الافتراضية لكل منصّة (من عرض الشاشة). تُغطّي شريط الحالة الأصلي
+// كاملًا في الأجهزة الحديثة. يمكن تجاوزها بتمرير ratio (من شريط التحكم).
+export const DEFAULT_RATIO = { ios: 0.12, android: 0.085 };
+
+export function statusBarHeight(w, platform, ratio) {
+  const r = ratio || DEFAULT_RATIO[platform] || DEFAULT_RATIO.ios;
+  return Math.round(w * r);
 }
 
 export function drawStatusBar(ctx, opts) {
-  const { x, y, w, platform = 'ios', tint = 'dark', bgFill = '#ffffff' } = opts;
-  const h = statusBarHeight(w, platform);
+  const { x, y, w, platform = 'ios', tint = 'dark', bgFill = '#ffffff', ratio } = opts;
+  const h = statusBarHeight(w, platform, ratio);
   const color = tint === 'light' ? '#ffffff' : '#000000';
 
   ctx.save();

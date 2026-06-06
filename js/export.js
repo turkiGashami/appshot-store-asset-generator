@@ -19,8 +19,11 @@ function entryPath(preset, index) {
 
 // shots: مصفوفة من configs (واحدة لكل سكرينشوت مرفوع).
 // selectedPresetIds: قائمة الأحجام المطلوبة.
+// shots: [{ screenshot, title, theme, layoutId }] لكل سكرينشوت إعداداته الخاصة.
+// globalConfig: { platform, showFrame, statusBarRatio, logo } مشترك لكل الدفعة.
+// iconConfig:   { theme, logo } لخلفية الأيقونات والكفر (منفصلة عن الصور الوصفية).
 // onProgress(done, total)
-export async function exportAll(shots, selectedPresetIds, sharedConfig, onProgress) {
+export async function exportAll(shots, selectedPresetIds, globalConfig, iconConfig, onProgress) {
   if (!window.JSZip) throw new Error('JSZip غير محمّلة');
   const zip = new window.JSZip();
   const selected = PRESETS.filter((p) => selectedPresetIds.includes(p.id));
@@ -33,9 +36,9 @@ export async function exportAll(shots, selectedPresetIds, sharedConfig, onProgre
   const total = perShot.length * Math.max(shots.length, 1) + once.length;
   let done = 0;
 
-  // السكرينشوتات: لكل صورة مرفوعة × كل حجم سكرينشوت
+  // السكرينشوتات: لكل صورة مرفوعة × كل حجم سكرينشوت (بإعدادات الصورة الخاصة)
   for (let i = 0; i < shots.length; i++) {
-    const cfg = { ...sharedConfig, ...shots[i] };
+    const cfg = { ...globalConfig, ...shots[i] };
     for (const preset of perShot) {
       render(canvas, preset, cfg);
       const blob = await canvasToBlob(canvas);
@@ -45,9 +48,9 @@ export async function exportAll(shots, selectedPresetIds, sharedConfig, onProgre
     }
   }
 
-  // الأيقونات + الكفر (مرة واحدة، تستخدم اللوجو + الثيم المشترك)
+  // الأيقونات + الكفر (مرة واحدة، بخلفية الأيقونات المنفصلة)
   for (const preset of once) {
-    render(canvas, preset, sharedConfig);
+    render(canvas, preset, iconConfig);
     const blob = await canvasToBlob(canvas);
     zip.file(entryPath(preset, 0), blob);
     onProgress && onProgress(++done, total);
