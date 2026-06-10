@@ -10,7 +10,7 @@ export function renderScreenshot(ctx, preset, config, helpers) {
   const { width, height } = preset;
   const {
     screenshot, title, theme, platform = 'ios', showFrame = true,
-    logo = null, statusBarRatio, layoutId = 'classic',
+    logo = null, statusBarRatio, layoutId = 'classic', showHeaderLogo = false,
   } = config;
   const layout = layoutById(layoutId);
 
@@ -19,8 +19,10 @@ export function renderScreenshot(ctx, preset, config, helpers) {
   drawPattern(ctx, layout, theme, width, height);
 
   // 2) منطقة العنوان (وربما الشعار) أعلى الصورة
+  // يظهر الشعار إن كان التخطيط من نوع "استعراض" أو فُعّل خيار "شعار المتجر بالأعلى".
   let headerBottom = height * 0.04;
-  if (layout.titleMode === 'logo' && logo) {
+  const wantLogo = (layout.titleMode === 'logo' || showHeaderLogo) && logo;
+  if (wantLogo) {
     const logoH = height * 0.09;
     const lr = (logo.naturalWidth || logo.width) / (logo.naturalHeight || logo.height);
     const logoW = Math.min(logoH * lr, width * 0.5);

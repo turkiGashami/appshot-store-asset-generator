@@ -1,5 +1,8 @@
 // presets.js — الأحجام المعتمدة لمتجري App Store و Google Play
 // كل preset يصف مخرجًا واحدًا بأبعاده الحقيقية بالبكسل.
+// fmt: صيغة التصدير. نتجنّب شفافية ألفا التي ترفضها المتاجر:
+//   jpeg = بدون قناة ألفا إطلاقًا (السكرينشوتات/الكفر/أيقونة آبل).
+//   png  = للأيقونات التي تتطلّبها جوجل بلاي (تُرسم معتمة بلا شفافية).
 
 export const PRESETS = [
   // ---- App Store ----
@@ -11,6 +14,7 @@ export const PRESETS = [
     folder: 'appstore-6.5',
     width: 1242,
     height: 2688,
+    fmt: 'jpeg',
     defaultOn: true,
   },
   {
@@ -21,6 +25,7 @@ export const PRESETS = [
     folder: 'appstore-6.7',
     width: 1290,
     height: 2796,
+    fmt: 'jpeg',
     defaultOn: true,
   },
   // ---- Google Play ----
@@ -32,6 +37,7 @@ export const PRESETS = [
     folder: 'googleplay',
     width: 1080,
     height: 1920,
+    fmt: 'jpeg',
     defaultOn: true,
   },
   // ---- Feature graphic (الكفر) ----
@@ -41,9 +47,10 @@ export const PRESETS = [
     type: 'feature',
     label: 'Feature Graphic / الكفر (1024×500)',
     folder: '',
-    fileName: 'feature-graphic.png',
+    fileName: 'feature-graphic.jpg',
     width: 1024,
     height: 500,
+    fmt: 'jpeg',
     defaultOn: true,
   },
   // ---- الأيقونات ----
@@ -53,9 +60,10 @@ export const PRESETS = [
     type: 'icon',
     label: 'App Icon (1024×1024)',
     folder: 'icons',
-    fileName: 'icon-1024.png',
+    fileName: 'icon-1024.jpg',
     width: 1024,
     height: 1024,
+    fmt: 'jpeg', // App Store: بدون ألفا
     defaultOn: true,
   },
   {
@@ -67,6 +75,7 @@ export const PRESETS = [
     fileName: 'icon-512.png',
     width: 512,
     height: 512,
+    fmt: 'png', // Google Play: PNG معتمة
     defaultOn: true,
   },
   {
@@ -78,6 +87,7 @@ export const PRESETS = [
     fileName: 'icon-540.png',
     width: 540,
     height: 540,
+    fmt: 'png',
     defaultOn: false,
   },
 ];

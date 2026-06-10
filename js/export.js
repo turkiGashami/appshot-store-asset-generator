@@ -4,8 +4,16 @@
 import { PRESETS } from './presets.js';
 import { render } from './renderer.js';
 
-function canvasToBlob(canvas) {
-  return new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+// يحوّل الكانفاس إلى Blob بالصيغة المطلوبة. JPEG لا يحمل قناة ألفا إطلاقًا
+// (لتجنّب رفض المتاجر للشفافية)، وPNG يُصدَّر معتمًا.
+function canvasToBlob(canvas, fmt = 'jpeg') {
+  const mime = fmt === 'png' ? 'image/png' : 'image/jpeg';
+  const quality = fmt === 'png' ? undefined : 0.95;
+  return new Promise((resolve) => canvas.toBlob(resolve, mime, quality));
+}
+
+function extOf(fmt) {
+  return fmt === 'png' ? 'png' : 'jpg';
 }
 
 // يبني اسم ملف داخل الـ ZIP لكل preset (مع ترقيم السكرينشوتات).
@@ -14,7 +22,8 @@ function entryPath(preset, index) {
     return preset.folder ? `${preset.folder}/${preset.fileName}` : preset.fileName;
   }
   const num = String(index + 1).padStart(2, '0');
-  return preset.folder ? `${preset.folder}/${num}.png` : `${num}.png`;
+  const name = `${num}.${extOf(preset.fmt)}`;
+  return preset.folder ? `${preset.folder}/${name}` : name;
 }
 
 // shots: مصفوفة من configs (واحدة لكل سكرينشوت مرفوع).
@@ -41,7 +50,7 @@ export async function exportAll(shots, selectedPresetIds, globalConfig, iconConf
     const cfg = { ...globalConfig, ...shots[i] };
     for (const preset of perShot) {
       render(canvas, preset, cfg);
-      const blob = await canvasToBlob(canvas);
+      const blob = await canvasToBlob(canvas, preset.fmt);
       zip.file(entryPath(preset, i), blob);
       onProgress && onProgress(++done, total);
       await new Promise((r) => setTimeout(r, 0));
@@ -51,7 +60,7 @@ export async function exportAll(shots, selectedPresetIds, globalConfig, iconConf
   // الأيقونات + الكفر (مرة واحدة، بخلفية الأيقونات المنفصلة)
   for (const preset of once) {
     render(canvas, preset, iconConfig);
-    const blob = await canvasToBlob(canvas);
+    const blob = await canvasToBlob(canvas, preset.fmt);
     zip.file(entryPath(preset, 0), blob);
     onProgress && onProgress(++done, total);
     await new Promise((r) => setTimeout(r, 0));
@@ -62,9 +71,9 @@ export async function exportAll(shots, selectedPresetIds, globalConfig, iconConf
 }
 
 // تحميل صورة مفردة (للمعاينة الحالية)
-export async function exportSingle(canvas, fileName) {
-  const blob = await canvasToBlob(canvas);
-  triggerDownload(blob, fileName || 'asset.png');
+export async function exportSingle(canvas, baseName, fmt = 'jpeg') {
+  const blob = await canvasToBlob(canvas, fmt);
+  triggerDownload(blob, `${baseName}.${extOf(fmt)}`);
 }
 
 function triggerDownload(blob, name) {

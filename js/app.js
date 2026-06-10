@@ -6,6 +6,50 @@ import { LAYOUTS } from './layouts.js';
 import { render, loadImage, fileToDataURL, ensureFontsReady } from './renderer.js';
 import { exportAll, exportSingle } from './export.js';
 
+// ---------- جلب إعدادات المتجر (لون + شعار) عبر بروكسي CORS ----------
+// نفس آلية مشروع zid_web_mockup_app.
+const PROXY_URL = 'https://zid-mockup-proxy.dev-60c.workers.dev';
+
+function normalizeUrl(raw) {
+  let url = (raw || '').trim();
+  if (!url) return '';
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  return url.replace(/\/+$/, '');
+}
+const viaProxy = (target) => `${PROXY_URL}/${target}`;
+
+async function fetchStoreSettings(storeUrl) {
+  const res = await fetch(viaProxy(`${storeUrl}/api/v1/settings`), {
+    method: 'GET',
+    headers: { Accept: 'application/json', 'Accept-Language': 'ar', 'zid-client-platform': 'mobile_app' },
+    credentials: 'include',
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText}`);
+  return res.json();
+}
+
+function extractBranding(payload) {
+  const root = (payload && payload.data) || payload || {};
+  const settings = root.settings || {};
+  const branding = settings.branding || {};
+  const colors = branding.colors || {};
+  const primary = colors.primary || branding.primary_color || null;
+  const logo = branding.logo || root.logo || branding.mobile_app_logo || null;
+  const name = root.name || branding.name || '';
+  return { name, primary, logo };
+}
+
+// تحميل صورة من رابط خارجي بأمان للكانفاس (عبر البروكسي + crossOrigin).
+function loadImageCors(src) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+}
+
 // ---------- الحالة ----------
 // كل سكرينشوت له إعداداته الخاصة (عنوان/ثيم/تخطيط) ليختلف عن بقية الصفحات.
 const state = {
@@ -15,6 +59,7 @@ const state = {
   platform: 'ios',          // مشترك للدفعة
   statusBarRatio: 0.12,     // مشترك (تغطية شريط الحالة)
   showFrame: true,          // مشترك
+  showHeaderLogo: false,    // إظهار شعار المتجر أعلى كل الصفحات
   iconThemeId: 'purple',    // خلفية الأيقونات/الكفر (منفصلة عن الصور الوصفية)
   iconCustomColor: '#6F008A',
   selected: new Set(PRESETS.filter((p) => p.defaultOn).map((p) => p.id)),
@@ -30,6 +75,14 @@ function activeTarget() {
 // ---------- عناصر DOM ----------
 const $ = (id) => document.getElementById(id);
 const els = {
+  storeUrlInput: $('storeUrlInput'),
+  fetchStoreBtn: $('fetchStoreBtn'),
+  fetchSpinner: $('fetchSpinner'),
+  storeInfo: $('storeInfo'),
+  storeName: $('storeName'),
+  storeColorHex: $('storeColorHex'),
+  storeColorSwatch: $('storeColorSwatch'),
+  headerLogoToggle: $('headerLogoToggle'),
   shotsInput: $('shotsInput'),
   logoInput: $('logoInput'),
   titleInput: $('titleInput'),
@@ -197,6 +250,7 @@ function configFor(preset) {
       platform: state.platform,
       statusBarRatio: state.statusBarRatio,
       showFrame: state.showFrame,
+      showHeaderLogo: state.showHeaderLogo,
       logo: state.logo,
       screenshot: state.shots[state.previewShot] ? state.shots[state.previewShot].img : null,
     };
@@ -285,8 +339,57 @@ els.previewPreset.addEventListener('change', (e) => {
 
 els.downloadCurrentBtn.addEventListener('click', () => {
   const preset = presetById(state.previewPresetId);
-  exportSingle(els.previewCanvas, `${preset.id}.png`);
+  exportSingle(els.previewCanvas, preset.id, preset.fmt);
 });
+
+els.headerLogoToggle.addEventListener('change', (e) => {
+  state.showHeaderLogo = e.target.checked;
+  renderPreview();
+});
+
+// جلب لون وشعار المتجر من الرابط
+els.fetchStoreBtn.addEventListener('click', async () => {
+  showError('');
+  const url = normalizeUrl(els.storeUrlInput.value);
+  if (!url) { showError('أدخل رابط المتجر أولًا.'); return; }
+  els.fetchStoreBtn.disabled = true;
+  els.fetchSpinner.hidden = false;
+  try {
+    const payload = await fetchStoreSettings(url);
+    const { name, primary, logo } = extractBranding(payload);
+    const hex = primary ? (primary.startsWith('#') ? primary : '#' + primary) : null;
+
+    // تطبيق اللون على خلفيات الصور الوصفية والأيقونة (مع إبقاء إمكانية التغيير يدويًا)
+    if (hex) {
+      state.defaults.themeId = 'custom';
+      state.defaults.customColor = hex;
+      state.shots.forEach((s) => { s.themeId = 'custom'; s.customColor = hex; });
+      state.iconThemeId = 'custom';
+      state.iconCustomColor = hex;
+    }
+    // تحميل شعار المتجر (يبقى رفع لوجو آخر متاحًا ويستبدله)
+    if (logo) {
+      try { state.logo = await loadImageCors(viaProxy(logo)); }
+      catch (e) { showError('تم جلب اللون، لكن تعذّر تحميل الشعار (يمكنك رفعه يدويًا).'); }
+    }
+    showStoreInfo(name, hex);
+    syncControls();
+    rebuildIconSwatches();
+    renderPreview();
+  } catch (err) {
+    showError('تعذّر جلب إعدادات المتجر: ' + (err.message || err));
+  } finally {
+    els.fetchStoreBtn.disabled = false;
+    els.fetchSpinner.hidden = true;
+  }
+});
+
+function showStoreInfo(name, hex) {
+  els.storeName.textContent = name || '—';
+  els.storeColorHex.textContent = hex || '—';
+  els.storeColorSwatch.style.background = hex || 'transparent';
+  els.storeInfo.hidden = false;
+}
 
 els.exportBtn.addEventListener('click', async () => {
   showError('');
@@ -318,6 +421,7 @@ els.exportBtn.addEventListener('click', async () => {
       platform: state.platform,
       statusBarRatio: state.statusBarRatio,
       showFrame: state.showFrame,
+      showHeaderLogo: state.showHeaderLogo,
       logo: state.logo,
     };
     const iconConfig = { theme: iconTheme(), logo: state.logo };
@@ -338,16 +442,20 @@ function setBusy(busy) {
   els.spinner.hidden = !busy;
 }
 
+function rebuildIconSwatches() {
+  buildSwatches(els.iconThemeSwatches, {
+    currentId: () => state.iconThemeId,
+    onPick: (id) => { state.iconThemeId = id; },
+    customColor: () => state.iconCustomColor,
+    onCustom: (hex) => { state.iconThemeId = 'custom'; state.iconCustomColor = hex; },
+  });
+}
+
 // ---------- التهيئة ----------
 buildPresets();
 buildPreviewPresetOptions();
 buildThumbs();
-buildSwatches(els.iconThemeSwatches, {
-  currentId: () => state.iconThemeId,
-  onPick: (id) => { state.iconThemeId = id; },
-  customColor: () => state.iconCustomColor,
-  onCustom: (hex) => { state.iconThemeId = 'custom'; state.iconCustomColor = hex; },
-});
+rebuildIconSwatches();
 syncControls();
 els.statusBarRange.value = Math.round(state.statusBarRatio * 100);
 els.statusBarVal.textContent = Math.round(state.statusBarRatio * 100) + '%';

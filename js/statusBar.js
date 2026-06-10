@@ -34,9 +34,10 @@ export function drawStatusBar(ctx, opts) {
   ctx.fillStyle = bgFill;
   ctx.fillRect(x, y, w, h);
 
-  // المحتوى بحجم ثابت (مهما زادت التغطية) ويوضع قرب أعلى الشريط كما في الهاتف.
+  // المحتوى بحجم ثابت (مهما زادت التغطية) ويبقى قرب أعلى الشاشة كهاتف حقيقي،
+  // والتغطية الإضافية تمتد أسفله فقط لتغطية الشريط الأصلي.
   const bandH = Math.min(h, w * (CONTENT_BASE[platform] || CONTENT_BASE.ios));
-  const cy = y + bandH / 2 + (h - bandH) * 0.3;
+  const cy = y + bandH / 2 + w * 0.005;
 
   if (platform === 'android') {
     drawAndroid(ctx, x, w, bandH, cy, color);
@@ -60,6 +61,13 @@ function drawIOS(ctx, x, w, bandH, cy, color) {
   ctx.textAlign = 'left';
   ctx.font = `600 ${fontSize}px 'Tajawal', system-ui, sans-serif`;
   ctx.fillText('9:41', x + padX, cy + fontSize * 0.04);
+
+  // الجزيرة الديناميكية (Dynamic Island) في الوسط — بحجم ثابت
+  const islW = w * 0.3;
+  const islH = bandH * 0.64;
+  roundRect(ctx, x + w / 2 - islW / 2, cy - islH / 2, islW, islH, islH / 2);
+  ctx.fillStyle = '#000000';
+  ctx.fill();
 
   // الأيقونات (يمين): شبكة، واي‑فاي، بطارية
   const iconH = bandH * 0.32;

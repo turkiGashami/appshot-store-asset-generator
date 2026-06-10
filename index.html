@@ -22,6 +22,24 @@
     </header>
 
     <form id="config-form" class="form" autocomplete="off">
+      <!-- جلب لون وشعار المتجر من الرابط -->
+      <div class="field">
+        <span class="field__label">رابط المتجر (اختياري)</span>
+        <input type="url" id="storeUrlInput" placeholder="https://example.zid.store" dir="ltr" />
+        <button type="button" id="fetchStoreBtn" class="button button--ghost">
+          <span>جلب اللون والشعار</span>
+          <span class="spinner spinner--dark" id="fetchSpinner" hidden></span>
+        </button>
+        <small class="field__hint">يجلب لون المتجر وشعاره تلقائيًا (يبقى بإمكانك رفع لوجو ولون آخر).</small>
+        <div id="storeInfo" class="store-info" hidden>
+          <div class="store-info__row"><span>المتجر</span><span id="storeName">—</span></div>
+          <div class="store-info__row">
+            <span>اللون</span>
+            <span class="store-info__color"><span class="store-info__swatch" id="storeColorSwatch"></span><code id="storeColorHex">—</code></span>
+          </div>
+        </div>
+      </div>
+
       <!-- رفع السكرينشوتات -->
       <label class="field">
         <span class="field__label">سكرينشوتات التطبيق</span>
@@ -84,9 +102,15 @@
 
       <!-- اللوجو -->
       <label class="field">
-        <span class="field__label">اللوجو (للأيقونة والكفر)</span>
+        <span class="field__label">اللوجو (للأيقونة والكفر والشعار العلوي)</span>
         <input type="file" id="logoInput" accept="image/png,image/svg+xml,image/*" />
-        <small class="field__hint">يفضّل PNG شفاف.</small>
+        <small class="field__hint">يفضّل PNG شفاف. يُستبدل شعار المتجر المجلوب إن رفعت لوجو.</small>
+      </label>
+
+      <!-- إظهار الشعار أعلى كل الصفحات -->
+      <label class="toggle">
+        <input type="checkbox" id="headerLogoToggle" />
+        <span>إظهار شعار المتجر أعلى كل الصور الوصفية</span>
       </label>
 
       <!-- خلفية الأيقونة والكفر (منفصلة) -->
