@@ -1,10 +1,15 @@
 // app.js — نقطة الدخول: إدارة الحالة وربط الواجهة بمحرّك الرسم والتصدير.
 
 import { PRESETS, GROUPS, presetById } from './presets.js';
-import { THEMES, themeById, makeCustomTheme } from './themes.js';
+import { THEMES, themeById, makeCustomTheme, hexShade } from './themes.js';
 import { LAYOUTS } from './layouts.js';
+import { BG_BASES, BG_DECORS, migrateLegacyStyle } from './backgrounds.js';
 import { render, loadImage, fileToDataURL, ensureFontsReady } from './renderer.js';
 import { exportAll, exportSingle } from './export.js';
+import {
+  validateMerchantConfig, buildExportConfig, downloadConfig,
+  listPresets, savePreset, deletePreset, presetByName,
+} from './merchantConfig.js';
 
 // ---------- جلب إعدادات المتجر (لون + شعار) عبر بروكسي CORS ----------
 // نفس آلية مشروع zid_web_mockup_app.
@@ -18,25 +23,59 @@ function normalizeUrl(raw) {
 }
 const viaProxy = (target) => `${PROXY_URL}/${target}`;
 
-async function fetchStoreSettings(storeUrl) {
-  const res = await fetch(viaProxy(`${storeUrl}/api/v1/settings`), {
-    method: 'GET',
-    headers: { Accept: 'application/json', 'Accept-Language': 'ar', 'zid-client-platform': 'mobile_app' },
-    credentials: 'include',
-  });
+// يقرأ صفحة المتجر نفسها ويستخرج الهوية (ألوان + شعار + اسم) من الـ HTML.
+// يعمل مع أي منصة (زد، سلة، شوبيفاي…) — API زد القديم (/api/v1/settings) صار deprecated.
+async function fetchStoreBranding(storeUrl) {
+  const res = await fetch(viaProxy(storeUrl), { headers: { Accept: 'text/html' } });
   if (!res.ok) throw new Error(`HTTP ${res.status} — ${res.statusText}`);
-  return res.json();
+  const html = await res.text();
+  const pick = (...patterns) => {
+    for (const re of patterns) {
+      const m = html.match(re);
+      if (m && m[1]) return m[1];
+    }
+    return null;
+  };
+
+  // اللون الأساسي: متغيرات CSS الشائعة ثم theme-color
+  const primary = pick(
+    /--(?:color-primary|primary-color|store-primary|main-color|brand-color|primary)\s*:\s*(#[0-9a-fA-F]{3,8})/,
+    /<meta[^>]+name=["']theme-color["'][^>]+content=["'](#[0-9a-fA-F]{3,8})["']/i
+  );
+  // درجات إضافية من هوية المتجر إن وُجدت (سلة تعرّف dark/light مثلًا)
+  const extras = [
+    pick(/--(?:color-primary-dark|primary-dark)\s*:\s*(#[0-9a-fA-F]{3,8})/),
+    pick(/--(?:color-primary-light|primary-light)\s*:\s*(#[0-9a-fA-F]{3,8})/),
+    pick(/--(?:color-secondary|secondary-color|store-secondary)\s*:\s*(#[0-9a-fA-F]{3,8})/),
+  ].filter(Boolean);
+
+  // الشعار: <img> بكلاس logo، ثم JSON-LD، ثم og:image كخيار أخير
+  let logo = pick(
+    /<img[^>]+class=["'][^"']*logo[^"']*["'][^>]+src=["']([^"']+)["']/i,
+    /<img[^>]+src=["']([^"']+)["'][^>]+class=["'][^"']*logo[^"']*["']/i,
+    /"logo"\s*:\s*"(https?:[^"]+)"/,
+    /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i
+  );
+  if (logo) {
+    logo = logo.replace(/\\\//g, '/').replace(/&amp;/g, '&');
+    try { logo = new URL(logo, storeUrl).href; } catch (e) { logo = null; }
+  }
+
+  const name = pick(
+    /<meta[^>]+property=["']og:site_name["'][^>]+content=["']([^"']+)["']/i,
+    /<title[^>]*>([^<|–-]+)/i
+  );
+
+  return { name: name ? name.trim() : '', primary: normalizeHex(primary), logo, extras: extras.map(normalizeHex).filter(Boolean) };
 }
 
-function extractBranding(payload) {
-  const root = (payload && payload.data) || payload || {};
-  const settings = root.settings || {};
-  const branding = settings.branding || {};
-  const colors = branding.colors || {};
-  const primary = colors.primary || branding.primary_color || null;
-  const logo = branding.logo || root.logo || branding.mobile_app_logo || null;
-  const name = root.name || branding.name || '';
-  return { name, primary, logo };
+// ‎#abc → ‎#aabbcc، ويرفض أي صيغة غير صالحة.
+function normalizeHex(hex) {
+  if (!hex) return null;
+  let h = hex.replace('#', '');
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  if (h.length === 8) h = h.slice(0, 6); // تجاهل قناة الألفا
+  return /^[0-9a-fA-F]{6}$/.test(h) ? '#' + h.toLowerCase() : null;
 }
 
 // تحميل صورة من رابط خارجي بأمان للكانفاس (عبر البروكسي + crossOrigin).
@@ -54,7 +93,7 @@ function loadImageCors(src) {
 // كل سكرينشوت له إعداداته الخاصة (عنوان/ثيم/تخطيط) ليختلف عن بقية الصفحات.
 const state = {
   shots: [], // [{ name, img, title, themeId, layoutId, customColor }]
-  defaults: { title: '', themeId: 'brown', layoutId: LAYOUTS[0].id, customColor: '#6F008A' },
+  defaults: { title: '', themeId: 'brown', layoutId: LAYOUTS[0].id, customColor: '#6F008A', bgBaseId: 'gradient', bgDecors: [], showLogo: false },
   logo: null,
   platform: 'ios',          // مشترك للدفعة
   statusBarRatio: 0.12,     // مشترك (تغطية شريط الحالة)
@@ -62,6 +101,10 @@ const state = {
   showHeaderLogo: false,    // إظهار شعار المتجر أعلى كل الصفحات
   iconThemeId: 'purple',    // خلفية الأيقونات/الكفر (منفصلة عن الصور الوصفية)
   iconCustomColor: '#6F008A',
+  bgGradient: true,         // خلفية اللون المخصص: تدرّج أو لون صلب (من إعداد التاجر)
+  brandPalette: [],         // ألوان الهوية (من المتجر/الاستيراد) — تظهر كحبّات جاهزة قابلة للتعديل
+  appName: '',              // اسم التطبيق من إعداد التاجر المستورد
+  lastImported: null,       // آخر merchant config مستورد (للحفاظ على round-trip كامل)
   selected: new Set(PRESETS.filter((p) => p.defaultOn).map((p) => p.id)),
   previewShot: 0,
   previewPresetId: PRESETS.find((p) => p.type === 'screenshot').id,
@@ -70,6 +113,95 @@ const state = {
 // الهدف الذي تعدّله عناصر التحكم (الصورة المحددة، أو الإعدادات الافتراضية إن لم توجد صور).
 function activeTarget() {
   return state.shots[state.previewShot] || state.defaults;
+}
+
+// ---------- حفظ واستعادة الجلسة (localStorage) ----------
+// الإعدادات والشعار يبقيان بعد إغلاق الصفحة — السكرينشوتات لا تُحفظ (حجمها كبير).
+const SESSION_KEY = 'sag:lastSession';
+
+// يحوّل صورة الشعار لـ dataURL قابل للحفظ (null لو الكانفاس ملوّث بمصدر خارجي).
+function imageToDataURL(img) {
+  try {
+    const c = document.createElement('canvas');
+    c.width = img.naturalWidth || img.width;
+    c.height = img.naturalHeight || img.height;
+    c.getContext('2d').drawImage(img, 0, 0);
+    return c.toDataURL('image/png');
+  } catch (e) {
+    return null;
+  }
+}
+
+function setLogo(img) {
+  state.logo = img;
+  state.logoDataURL = img ? imageToDataURL(img) : null;
+  updateLogoPreview();
+}
+
+function saveSession() {
+  try {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({
+      defaults: state.defaults,
+      platform: state.platform,
+      statusBarRatio: state.statusBarRatio,
+      showFrame: state.showFrame,
+      showHeaderLogo: state.showHeaderLogo,
+      iconThemeId: state.iconThemeId,
+      iconCustomColor: state.iconCustomColor,
+      bgGradient: state.bgGradient,
+      appName: state.appName,
+      lastImported: state.lastImported,
+      logoDataURL: state.logoDataURL || null,
+      brandPalette: state.brandPalette,
+    }));
+  } catch (e) {
+    /* امتلاء localStorage — نتجاهل، الجلسة الحالية لا تتأثر */
+  }
+}
+
+async function restoreSession() {
+  let s;
+  try {
+    s = JSON.parse(localStorage.getItem(SESSION_KEY));
+  } catch (e) { return; }
+  if (!s) return;
+  Object.assign(state.defaults, s.defaults || {});
+  // هجرة جلسات قديمة: bgStyleId الواحد → أساس + زخارف
+  if (state.defaults.bgStyleId && !s.defaults.bgBaseId) {
+    const m = migrateLegacyStyle(state.defaults.bgStyleId);
+    state.defaults.bgBaseId = m.base;
+    state.defaults.bgDecors = m.decors;
+    delete state.defaults.bgStyleId;
+  }
+  if (!Array.isArray(state.defaults.bgDecors)) state.defaults.bgDecors = [];
+  if (s.platform) state.platform = s.platform;
+  if (typeof s.statusBarRatio === 'number') state.statusBarRatio = s.statusBarRatio;
+  if (typeof s.showFrame === 'boolean') state.showFrame = s.showFrame;
+  if (typeof s.showHeaderLogo === 'boolean') state.showHeaderLogo = s.showHeaderLogo;
+  if (s.iconThemeId) state.iconThemeId = s.iconThemeId;
+  if (s.iconCustomColor) state.iconCustomColor = s.iconCustomColor;
+  if (typeof s.bgGradient === 'boolean') state.bgGradient = s.bgGradient;
+  state.appName = s.appName || '';
+  state.lastImported = s.lastImported || null;
+  if (Array.isArray(s.brandPalette)) state.brandPalette = s.brandPalette;
+  if (s.logoDataURL) {
+    try { setLogo(await loadImage(s.logoDataURL)); } catch (e) { /* شعار تالف — نتجاهله */ }
+  }
+  // مزامنة عناصر التحكم مع الحالة المستعادة
+  els.frameToggle.checked = state.showFrame;
+  els.headerLogoToggle.checked = state.showHeaderLogo;
+  const radio = els.platformGroup.querySelector(`input[value="${state.platform}"]`);
+  if (radio) radio.checked = true;
+}
+
+function updateLogoPreview() {
+  if (!els.logoPreview) return;
+  if (state.logo) {
+    els.logoPreview.src = state.logo.src;
+    els.logoPreviewRow.hidden = false;
+  } else {
+    els.logoPreviewRow.hidden = true;
+  }
 }
 
 // ---------- عناصر DOM ----------
@@ -83,12 +215,30 @@ const els = {
   storeColorHex: $('storeColorHex'),
   storeColorSwatch: $('storeColorSwatch'),
   headerLogoToggle: $('headerLogoToggle'),
+  merchantConfigInput: $('merchantConfigInput'),
+  importConfigBtn: $('importConfigBtn'),
+  exportConfigBtn: $('exportConfigBtn'),
+  presetSelect: $('presetSelect'),
+  savePresetBtn: $('savePresetBtn'),
+  deletePresetBtn: $('deletePresetBtn'),
   shotsInput: $('shotsInput'),
   logoInput: $('logoInput'),
+  logoPreviewRow: $('logoPreviewRow'),
+  logoPreview: $('logoPreview'),
   titleInput: $('titleInput'),
   themeSwatches: $('themeSwatches'),
   iconThemeSwatches: $('iconThemeSwatches'),
   layoutChips: $('layoutChips'),
+  bgBaseChips: $('bgBaseChips'),
+  bgDecorChips: $('bgDecorChips'),
+  shotLogoToggle: $('shotLogoToggle'),
+  openMockupBtn: $('openMockupBtn'),
+  stageTabs: $('stageTabs'),
+  mockupFrame: $('mockupFrame'),
+  captureMockupBtn: $('captureMockupBtn'),
+  openTabBtn: $('openTabBtn'),
+  mockupEmpty: $('mockupEmpty'),
+  mockupHint: $('mockupHint'),
   statusBarRange: $('statusBarRange'),
   statusBarVal: $('statusBarVal'),
   frameToggle: $('frameToggle'),
@@ -124,6 +274,21 @@ function buildSwatches(container, opts) {
     container.appendChild(b);
   });
 
+  // ألوان الهوية المجلوبة من المتجر (قابلة للتعديل: اخترها ثم عدّلها بالمنتقي)
+  (state.brandPalette || []).forEach((hex) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'swatch swatch--brand' + (active === 'custom' && opts.customColor() === hex ? ' is-active' : '');
+    b.title = 'من هوية المتجر: ' + hex;
+    b.style.background = hex;
+    b.addEventListener('click', () => {
+      opts.onCustom(hex);
+      buildSwatches(container, opts);
+      renderPreview();
+    });
+    container.appendChild(b);
+  });
+
   // لون مخصص (color picker)
   const label = document.createElement('label');
   label.className = 'swatch swatch--custom' + (active === 'custom' ? ' is-active' : '');
@@ -132,10 +297,17 @@ function buildSwatches(container, opts) {
   const input = document.createElement('input');
   input.type = 'color';
   input.value = opts.customColor();
+  // أثناء السحب داخل المنتقي: حدّث الحالة والمعاينة فقط — إعادة بناء العناصر هنا
+  // تدمّر المنتقي المفتوح وتقفله (سبب مشكلة "يختار اللون علطول").
   input.addEventListener('input', (e) => {
     opts.onCustom(e.target.value);
-    buildSwatches(container, opts);
+    label.style.background = e.target.value;
+    label.classList.add('is-active');
     renderPreview();
+  });
+  // عند الإغلاق/التأكيد فقط: أعد بناء الصف لمزامنة حالة التحديد
+  input.addEventListener('change', () => {
+    buildSwatches(container, opts);
   });
   label.appendChild(input);
   container.appendChild(label);
@@ -154,6 +326,43 @@ function buildLayouts() {
       renderPreview();
     });
     els.layoutChips.appendChild(b);
+  });
+}
+
+function buildBgStyles() {
+  // أساس الخلفية — اختيار واحد
+  els.bgBaseChips.innerHTML = '';
+  BG_BASES.forEach((s) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip' + (s.id === activeTarget().bgBaseId ? ' is-active' : '');
+    b.textContent = s.label;
+    b.addEventListener('click', () => {
+      activeTarget().bgBaseId = s.id;
+      buildBgStyles();
+      renderPreview();
+    });
+    els.bgBaseChips.appendChild(b);
+  });
+  // الزخارف — تبديل متعدد (يمكن دمج أكثر من زخرفة)
+  els.bgDecorChips.innerHTML = '';
+  BG_DECORS.forEach((s) => {
+    const t = activeTarget();
+    if (!Array.isArray(t.bgDecors)) t.bgDecors = [];
+    const on = t.bgDecors.includes(s.id);
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'chip' + (on ? ' is-active' : '');
+    b.textContent = s.label;
+    b.addEventListener('click', () => {
+      const cur = activeTarget();
+      cur.bgDecors = cur.bgDecors.includes(s.id)
+        ? cur.bgDecors.filter((id) => id !== s.id)
+        : [...cur.bgDecors, s.id];
+      buildBgStyles();
+      renderPreview();
+    });
+    els.bgDecorChips.appendChild(b);
   });
 }
 
@@ -202,6 +411,8 @@ function buildPreviewPresetOptions() {
 function buildThumbs() {
   els.thumbs.innerHTML = '';
   state.shots.forEach((shot, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'thumb-wrap';
     const d = document.createElement('button');
     d.type = 'button';
     d.className = 'thumb' + (i === state.previewShot ? ' is-active' : '');
@@ -214,14 +425,30 @@ function buildThumbs() {
       syncControls();
       renderPreview();
     });
-    els.thumbs.appendChild(d);
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'thumb-del';
+    del.title = 'حذف الصورة';
+    del.textContent = '✕';
+    del.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      state.shots.splice(i, 1);
+      if (state.previewShot >= state.shots.length) state.previewShot = Math.max(0, state.shots.length - 1);
+      buildThumbs();
+      syncControls();
+      renderPreview();
+    });
+    wrap.appendChild(d);
+    wrap.appendChild(del);
+    els.thumbs.appendChild(wrap);
   });
 }
 
-// مزامنة عناصر التحكم (عنوان/ثيم/تخطيط) مع إعدادات الصورة المحددة.
+// مزامنة عناصر التحكم (عنوان/ثيم/تخطيط/شعار) مع إعدادات الصورة المحددة.
 function syncControls() {
   const t = activeTarget();
   els.titleInput.value = t.title || '';
+  els.shotLogoToggle.checked = !!t.showLogo;
   buildSwatches(els.themeSwatches, {
     currentId: () => activeTarget().themeId,
     onPick: (id) => { activeTarget().themeId = id; },
@@ -229,14 +456,15 @@ function syncControls() {
     onCustom: (hex) => { const a = activeTarget(); a.themeId = 'custom'; a.customColor = hex; },
   });
   buildLayouts();
+  buildBgStyles();
 }
 
 // يحلّ ثيم الصورة الوصفية (مع دعم اللون المخصص).
 function shotTheme(t) {
-  return t.themeId === 'custom' ? makeCustomTheme(t.customColor) : themeById(t.themeId);
+  return t.themeId === 'custom' ? makeCustomTheme(t.customColor, state.bgGradient) : themeById(t.themeId);
 }
 function iconTheme() {
-  return state.iconThemeId === 'custom' ? makeCustomTheme(state.iconCustomColor) : themeById(state.iconThemeId);
+  return state.iconThemeId === 'custom' ? makeCustomTheme(state.iconCustomColor, state.bgGradient) : themeById(state.iconThemeId);
 }
 
 // ---------- المعاينة ----------
@@ -247,10 +475,12 @@ function configFor(preset) {
       title: t.title,
       theme: shotTheme(t),
       layoutId: t.layoutId,
+      bgBaseId: t.bgBaseId,
+      bgDecors: t.bgDecors || [],
       platform: state.platform,
       statusBarRatio: state.statusBarRatio,
       showFrame: state.showFrame,
-      showHeaderLogo: state.showHeaderLogo,
+      showHeaderLogo: !!t.showLogo,
       logo: state.logo,
       screenshot: state.shots[state.previewShot] ? state.shots[state.previewShot].img : null,
     };
@@ -260,6 +490,7 @@ function configFor(preset) {
 }
 
 async function renderPreview() {
+  saveSession(); // كل تغيير يمر من هنا — أرخص نقطة حفظ تلقائي
   await ensureFontsReady();
   const preset = presetById(state.previewPresetId);
   const cfg = configFor(preset);
@@ -278,19 +509,219 @@ function showError(msg) {
   els.errorBox.hidden = !msg;
 }
 
+// صور الآيفون كثيرًا ما تصل بصيغة HEIC التي لا تفكّها المتصفحات —
+// نحوّلها لـ JPEG عبر heic-to (libheif حديثة تدعم صور HDR 10-bit من الآيفونات الجديدة).
+// تُحمَّل عند الحاجة فقط (الملف ~3MB).
+let heicToModule = null;
+function isHeic(file) {
+  return /image\/hei[cf]/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+}
+
+async function fileToImage(f) {
+  let blob = f;
+  if (isHeic(f)) {
+    try {
+      if (!heicToModule) heicToModule = await import('../lib/heic-to.min.js');
+      blob = await heicToModule.heicTo({ blob: f, type: 'image/jpeg', quality: 0.95 });
+    } catch (e) {
+      blob = f; // بعض المتصفحات (Safari) تفك HEIC مباشرة — نجرب التحميل المباشر قبل الاستسلام
+    }
+  }
+  const url = await fileToDataURL(blob);
+  return loadImage(url);
+}
+
 els.shotsInput.addEventListener('change', async (e) => {
   showError('');
-  const files = [...e.target.files];
+  // الترتيب حسب اسم الملف (الصور المُلتقطة مرقمة: 01-home.png…) = ترتيب الرفع النهائي في الـ ZIP.
+  const files = [...e.target.files].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { numeric: true })
+  );
   for (const f of files) {
     try {
-      const url = await fileToDataURL(f);
-      const img = await loadImage(url);
+      const img = await fileToImage(f);
       state.shots.push({ name: f.name, img, ...state.defaults });
     } catch (err) {
-      showError('تعذّر تحميل إحدى الصور: ' + f.name);
+      showError('تعذّر تحميل إحدى الصور: ' + f.name + (isHeic(f) ? ' — فشل تحويل HEIC، حوّلها يدويًا لـ PNG/JPG' : ' — تأكد أنها PNG أو JPG'));
     }
   }
   state.previewShot = state.shots.length ? state.shots.length - files.length : 0;
+  buildThumbs();
+  syncControls();
+  renderPreview();
+});
+
+// ---------- التصفح والالتقاط من معاينة المتجر ----------
+// تحمّل موقع المتجر الحقيقي عبر البروكسي داخل إطار جوال (390px = عرض موبايل)،
+// وزر الالتقاط يصوّر التبويب الحالي عبر getDisplayMedia ويقص منطقة الشاشة بدقة
+// (الإطار عنصر عندنا فموضعه معروف دائمًا).
+// ملاحظة: متاجر سلة تمنع التضمين (CSP frame-ancestors) — متاجر زد تعمل.
+
+// رسالة داخل لوحة المعاينة (الشريط الجانبي مغطّى باللوحة فلا تظهر أخطاؤه).
+// mockupMsg → طبقة فوق الإطار (تحميل/فراغ). mockupHint → السطر السفلي (لا يغطّي المعاينة).
+function mockupMsg(text) {
+  els.mockupEmpty.textContent = text || '';
+  els.mockupEmpty.hidden = !text;
+}
+const MOCKUP_HINT_DEFAULT = els.mockupHint.textContent;
+function mockupHint(text) {
+  els.mockupHint.textContent = text || MOCKUP_HINT_DEFAULT;
+}
+
+// أداة معاينة التطبيق الرسمية (تطبيق Flutter يرندر المتجر كتطبيق حقيقي).
+// نضمّنها كما هي بدل محاولة محاكاة الرندر — تعطي نفس جودة الموقع الرسمي تمامًا.
+const MOCKUP_TOOL_URL = 'https://appsbunches.github.io/zid_appsbunche_app_mockup/v2/';
+
+// ---------- تبويبات منطقة العرض ----------
+// تبديل بين "تصميم الصورة" و"تصفّح المتجر"، وتحميل أداة المعاينة عند أول دخول للتبويب.
+function showTab(name) {
+  els.stageTabs.querySelectorAll('.tabs__tab').forEach((t) => {
+    t.classList.toggle('is-active', t.dataset.tab === name);
+  });
+  document.querySelectorAll('.stage__panel').forEach((p) => {
+    p.hidden = p.dataset.panel !== name;
+  });
+  if (name === 'browse') ensureMockupLoaded();
+}
+
+// يحمّل الأداة الرسمية مرة واحدة (lazy) ويحاول تعبئة رابط المتجر تلقائيًا.
+function ensureMockupLoaded() {
+  if (els.mockupFrame.dataset.loaded === '1') {
+    prefillMockupStore();
+    return;
+  }
+  mockupMsg('جارٍ فتح أداة المعاينة…');
+  els.mockupFrame.src = MOCKUP_TOOL_URL;
+  els.mockupFrame.dataset.loaded = '1';
+  els.mockupFrame.onload = () => {
+    mockupMsg('');
+    prefillMockupStore();
+  };
+}
+
+// يحاول وضع رابط المتجر في خانة الأداة الرسمية وتشغيل المعاينة (same-origin فقط).
+function prefillMockupStore() {
+  const url = normalizeUrl(els.storeUrlInput.value);
+  if (!url) return;
+  try {
+    const doc = els.mockupFrame.contentDocument;
+    const input = doc && doc.getElementById('storeUrl');
+    if (input && !input.value) {
+      input.value = url;
+      const btn = doc.getElementById('previewBtn') || doc.querySelector('button[type="submit"], .button--primary');
+      if (btn) btn.click();
+    }
+  } catch (e) {
+    // cross-origin (تشغيل محلي): المستخدم يكتب الرابط داخل الأداة يدويًا
+  }
+}
+
+els.stageTabs.addEventListener('click', (e) => {
+  const tab = e.target.closest('.tabs__tab');
+  if (tab) showTab(tab.dataset.tab);
+});
+
+// زر الشريط الجانبي: ينقل لتبويب التصفّح.
+els.openMockupBtn.addEventListener('click', () => showTab('browse'));
+
+els.openTabBtn.addEventListener('click', () => {
+  window.open(MOCKUP_TOOL_URL, '_blank', 'noopener');
+});
+
+// مستطيل القص: شاشة الجوال داخل الأداة الرسمية إن أمكن الوصول إليها (same-origin)،
+// وإلا فإطار اللوحة كاملًا (تشغيل محلي cross-origin → المستخدم يقصّ يدويًا/يلصق).
+function phoneScreenRect() {
+  const fRect = els.mockupFrame.getBoundingClientRect();
+  try {
+    const doc = els.mockupFrame.contentDocument;
+    // الأداة الرسمية ترسم شاشة الجوال في .phone__screen
+    const screen = doc && doc.querySelector('.phone__screen, .phone__frame, .phone');
+    if (screen) {
+      const r = screen.getBoundingClientRect();
+      if (r.width > 20 && r.height > 20) {
+        return { left: fRect.left + r.left, top: fRect.top + r.top, width: r.width, height: r.height };
+      }
+    }
+  } catch (e) {
+    /* cross-origin — نقصّ على إطار اللوحة كاملًا */
+  }
+  return fRect;
+}
+
+els.captureMockupBtn.addEventListener('click', async () => {
+  mockupHint('');
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+    mockupHint('متصفحك لا يدعم التقاط الشاشة — خذ سكرينشوت يدويًا والصقه بـ Ctrl+V.');
+    return;
+  }
+  let stream;
+  try {
+    stream = await navigator.mediaDevices.getDisplayMedia({
+      video: { displaySurface: 'browser' },
+      preferCurrentTab: true,       // Chrome: مشاركة التبويب الحالي بنقرة واحدة
+      selfBrowserSurface: 'include',
+      audio: false,
+    });
+  } catch (e) {
+    mockupHint('أُلغي الالتقاط (لازم توافق على مشاركة التبويب).');
+    return;
+  }
+  try {
+    const video = document.createElement('video');
+    video.srcObject = stream;
+    video.muted = true;
+    await video.play();
+    await new Promise((r) => setTimeout(r, 350)); // استقرار أول إطار
+    const full = document.createElement('canvas');
+    full.width = video.videoWidth;
+    full.height = video.videoHeight;
+    full.getContext('2d').drawImage(video, 0, 0);
+
+    const rect = phoneScreenRect();
+    const sx = full.width / document.documentElement.clientWidth;
+    const sy = full.height / document.documentElement.clientHeight;
+    const c = document.createElement('canvas');
+    c.width = Math.max(1, Math.round(rect.width * sx));
+    c.height = Math.max(1, Math.round(rect.height * sy));
+    c.getContext('2d').drawImage(
+      full,
+      rect.left * sx, rect.top * sy, rect.width * sx, rect.height * sy,
+      0, 0, c.width, c.height
+    );
+    const img = await loadImage(c.toDataURL('image/png'));
+    const num = String(state.shots.length + 1).padStart(2, '0');
+    state.shots.push({ ...state.defaults, name: `mockup-${num}.png`, img });
+    state.previewShot = state.shots.length - 1;
+    buildThumbs();
+    syncControls();
+    renderPreview();
+    mockupHint(`أُضيفت الشاشة (${num}). تنقّل والتقط المزيد أو أغلق اللوحة.`);
+  } catch (e) {
+    mockupHint('فشل الالتقاط: ' + (e.message || e));
+  } finally {
+    stream.getTracks().forEach((t) => t.stop());
+  }
+});
+
+// لصق سكرينشوت مباشرة (Ctrl/Cmd+V) — يسهّل النقل من أداة الموك أب أو أي مصدر.
+window.addEventListener('paste', async (e) => {
+  const items = [...((e.clipboardData && e.clipboardData.items) || [])]
+    .filter((it) => it.type.startsWith('image/'));
+  if (!items.length) return;
+  e.preventDefault();
+  showError('');
+  for (const it of items) {
+    const f = it.getAsFile();
+    if (!f) continue;
+    try {
+      const img = await fileToImage(f);
+      const num = String(state.shots.length + 1).padStart(2, '0');
+      state.shots.push({ ...state.defaults, name: `pasted-${num}.png`, img });
+    } catch (err) {
+      showError('تعذّر لصق الصورة من الحافظة.');
+    }
+  }
+  state.previewShot = state.shots.length - 1;
   buildThumbs();
   syncControls();
   renderPreview();
@@ -301,8 +732,7 @@ els.logoInput.addEventListener('change', async (e) => {
   const f = e.target.files[0];
   if (!f) return;
   try {
-    const url = await fileToDataURL(f);
-    state.logo = await loadImage(url);
+    setLogo(await fileToImage(f));
     renderPreview();
   } catch (err) {
     showError('تعذّر تحميل اللوجو.');
@@ -342,9 +772,155 @@ els.downloadCurrentBtn.addEventListener('click', () => {
   exportSingle(els.previewCanvas, preset.id, preset.fmt);
 });
 
+// تطبيق جماعي: يضبط خيار الشعار في كل الصور دفعة واحدة (ويبقى قابلًا للتعديل فرديًا)
 els.headerLogoToggle.addEventListener('change', (e) => {
   state.showHeaderLogo = e.target.checked;
+  state.defaults.showLogo = e.target.checked;
+  state.shots.forEach((s) => { s.showLogo = e.target.checked; });
+  syncControls();
   renderPreview();
+});
+
+// خيار الشعار للصورة المحددة فقط
+els.shotLogoToggle.addEventListener('change', (e) => {
+  activeTarget().showLogo = e.target.checked;
+  renderPreview();
+});
+
+// يبني لوحة ألوان الهوية: ألوان المتجر الفعلية + درجات محسوبة (حتى 5 حبّات فريدة).
+function setBrandPalette(primary, extras = []) {
+  const all = [primary, ...extras, hexShade(primary, -0.25), hexShade(primary, 0.25)]
+    .filter(Boolean);
+  state.brandPalette = [...new Set(all)].slice(0, 5);
+}
+
+// ---------- إعداد التاجر (استيراد/تصدير/presets) ----------
+// يطبّق merchant config (صيغة merchants/<id>.json المشتركة) على حالة الأداة.
+async function applyMerchantConfig(cfg) {
+  const hex = cfg.brand && cfg.brand.primaryColor;
+  if (hex) {
+    state.defaults.themeId = 'custom';
+    state.defaults.customColor = hex;
+    state.shots.forEach((s) => { s.themeId = 'custom'; s.customColor = hex; });
+    state.iconThemeId = 'custom';
+    state.iconCustomColor = hex;
+    setBrandPalette(hex, cfg.brand.secondaryColor ? [cfg.brand.secondaryColor] : []);
+  }
+
+  const ag = cfg.assetGenerator || {};
+  if (typeof ag.statusBarCoverage === 'number') {
+    state.statusBarRatio = ag.statusBarCoverage / 100;
+    els.statusBarRange.value = ag.statusBarCoverage;
+    els.statusBarVal.textContent = ag.statusBarCoverage + '%';
+  }
+  if (typeof ag.showDeviceFrame === 'boolean') {
+    state.showFrame = ag.showDeviceFrame;
+    els.frameToggle.checked = ag.showDeviceFrame;
+  }
+  if (ag.background && ag.background.type) {
+    state.bgGradient = ag.background.type !== 'solid';
+    const m = migrateLegacyStyle(ag.background.type);
+    const decors = Array.isArray(ag.background.decors)
+      ? ag.background.decors.filter((id) => BG_DECORS.some((s) => s.id === id))
+      : m.decors;
+    state.defaults.bgBaseId = m.base;
+    state.defaults.bgDecors = decors;
+    state.shots.forEach((s) => { s.bgBaseId = m.base; s.bgDecors = [...decors]; });
+  }
+  if (ag.template) {
+    const layoutId = ag.template === 'default' ? 'classic' : ag.template;
+    if (LAYOUTS.some((l) => l.id === layoutId)) {
+      state.defaults.layoutId = layoutId;
+      state.shots.forEach((s) => { s.layoutId = layoutId; });
+    }
+  }
+
+  // الويب لا يقرأ مسارات محلية (brand.logo) — البديل: logoBase64 أو رفع يدوي.
+  if (cfg.logoBase64) {
+    const src = cfg.logoBase64.startsWith('data:')
+      ? cfg.logoBase64
+      : 'data:image/png;base64,' + cfg.logoBase64;
+    try { setLogo(await loadImage(src)); }
+    catch (e) { showError('تعذّر تحميل الشعار من logoBase64 — ارفعه يدويًا.'); }
+  }
+
+  state.appName = cfg.appName || '';
+  state.lastImported = cfg;
+  showStoreInfo(cfg.appName || cfg.id, hex || null);
+  syncControls();
+  rebuildIconSwatches();
+  renderPreview();
+}
+
+// القيم الحالية للأداة بصيغة تصلح للتصدير/الحفظ كـ preset.
+function currentToolSettings() {
+  const d = state.defaults;
+  return {
+    appName: state.appName,
+    primaryColor: d.themeId === 'custom' ? d.customColor : themeById(d.themeId).swatch,
+    template: d.layoutId,
+    statusBarCoverage: Math.round(state.statusBarRatio * 100),
+    showDeviceFrame: state.showFrame,
+    backgroundType: state.defaults.bgBaseId || 'gradient',
+    backgroundDecors: state.defaults.bgDecors || [],
+  };
+}
+
+function rebuildPresetSelect(selected) {
+  els.presetSelect.innerHTML = '<option value="">— الإعدادات المحفوظة —</option>';
+  listPresets().forEach((p) => {
+    const opt = document.createElement('option');
+    opt.value = p.name;
+    opt.textContent = p.name;
+    if (p.name === selected) opt.selected = true;
+    els.presetSelect.appendChild(opt);
+  });
+}
+
+els.importConfigBtn.addEventListener('click', () => els.merchantConfigInput.click());
+
+els.merchantConfigInput.addEventListener('change', async (e) => {
+  showError('');
+  const f = e.target.files[0];
+  e.target.value = ''; // يسمح بإعادة استيراد نفس الملف
+  if (!f) return;
+  let cfg;
+  try {
+    cfg = JSON.parse(await f.text());
+  } catch (err) {
+    showError('الملف ليس JSON صالحًا: ' + (err.message || err));
+    return;
+  }
+  const errors = validateMerchantConfig(cfg);
+  if (errors.length) {
+    showError('إعداد التاجر غير صالح — ' + errors.join(' • '));
+    return;
+  }
+  await applyMerchantConfig(cfg);
+});
+
+els.exportConfigBtn.addEventListener('click', () => {
+  downloadConfig(buildExportConfig(currentToolSettings(), state.lastImported));
+});
+
+els.presetSelect.addEventListener('change', async (e) => {
+  const p = presetByName(e.target.value);
+  if (p) await applyMerchantConfig(p.config);
+});
+
+els.savePresetBtn.addEventListener('click', () => {
+  const suggested = state.appName || (state.lastImported && state.lastImported.id) || '';
+  const name = (window.prompt('اسم الإعداد المحفوظ:', suggested) || '').trim();
+  if (!name) return;
+  savePreset(name, buildExportConfig(currentToolSettings(), state.lastImported));
+  rebuildPresetSelect(name);
+});
+
+els.deletePresetBtn.addEventListener('click', () => {
+  const name = els.presetSelect.value;
+  if (!name) return;
+  deletePreset(name);
+  rebuildPresetSelect('');
 });
 
 // جلب لون وشعار المتجر من الرابط
@@ -355,9 +931,9 @@ els.fetchStoreBtn.addEventListener('click', async () => {
   els.fetchStoreBtn.disabled = true;
   els.fetchSpinner.hidden = false;
   try {
-    const payload = await fetchStoreSettings(url);
-    const { name, primary, logo } = extractBranding(payload);
-    const hex = primary ? (primary.startsWith('#') ? primary : '#' + primary) : null;
+    const { name, primary, logo, extras } = await fetchStoreBranding(url);
+    const hex = primary;
+    if (!hex && !logo) throw new Error('ما لقينا ألوانًا أو شعارًا في صفحة المتجر');
 
     // تطبيق اللون على خلفيات الصور الوصفية والأيقونة (مع إبقاء إمكانية التغيير يدويًا)
     if (hex) {
@@ -366,10 +942,11 @@ els.fetchStoreBtn.addEventListener('click', async () => {
       state.shots.forEach((s) => { s.themeId = 'custom'; s.customColor = hex; });
       state.iconThemeId = 'custom';
       state.iconCustomColor = hex;
+      setBrandPalette(hex, extras);
     }
     // تحميل شعار المتجر (يبقى رفع لوجو آخر متاحًا ويستبدله)
     if (logo) {
-      try { state.logo = await loadImageCors(viaProxy(logo)); }
+      try { setLogo(await loadImageCors(viaProxy(logo))); }
       catch (e) { showError('تم جلب اللون، لكن تعذّر تحميل الشعار (يمكنك رفعه يدويًا).'); }
     }
     showStoreInfo(name, hex);
@@ -416,12 +993,14 @@ els.exportBtn.addEventListener('click', async () => {
       title: s.title,
       theme: shotTheme(s),
       layoutId: s.layoutId,
+      bgBaseId: s.bgBaseId,
+      bgDecors: s.bgDecors || [],
+      showHeaderLogo: !!s.showLogo,
     }));
     const globalConfig = {
       platform: state.platform,
       statusBarRatio: state.statusBarRatio,
       showFrame: state.showFrame,
-      showHeaderLogo: state.showHeaderLogo,
       logo: state.logo,
     };
     const iconConfig = { theme: iconTheme(), logo: state.logo };
@@ -452,11 +1031,16 @@ function rebuildIconSwatches() {
 }
 
 // ---------- التهيئة ----------
-buildPresets();
-buildPreviewPresetOptions();
-buildThumbs();
-rebuildIconSwatches();
-syncControls();
-els.statusBarRange.value = Math.round(state.statusBarRatio * 100);
-els.statusBarVal.textContent = Math.round(state.statusBarRatio * 100) + '%';
-renderPreview();
+(async () => {
+  await restoreSession();
+  buildPresets();
+  buildPreviewPresetOptions();
+  rebuildPresetSelect('');
+  buildThumbs();
+  rebuildIconSwatches();
+  syncControls();
+  updateLogoPreview();
+  els.statusBarRange.value = Math.round(state.statusBarRatio * 100);
+  els.statusBarVal.textContent = Math.round(state.statusBarRatio * 100) + '%';
+  renderPreview();
+})();

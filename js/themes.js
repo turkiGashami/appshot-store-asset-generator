@@ -72,13 +72,23 @@ function hexToRgb(hex) {
 }
 
 // يفتّح/يغمّق لونًا بنسبة amount (موجبة = أفتح، سالبة = أغمق).
-function shade(hex, amount) {
+export function shade(hex, amount) {
   const { r, g, b } = hexToRgb(hex);
   const f = (c) => {
     const v = amount < 0 ? c * (1 + amount) : c + (255 - c) * amount;
     return Math.max(0, Math.min(255, Math.round(v)));
   };
   return `rgb(${f(r)}, ${f(g)}, ${f(b)})`;
+}
+
+// نفس shade لكن يعيد hex — لازم للوحات الألوان وقيم <input type="color">.
+export function hexShade(hex, amount) {
+  const { r, g, b } = hexToRgb(hex);
+  const f = (c) => {
+    const v = amount < 0 ? c * (1 + amount) : c + (255 - c) * amount;
+    return Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  };
+  return '#' + f(r) + f(g) + f(b);
 }
 
 // يبني fillStyle مناسبًا من تعريف الخلفية (لون صلب أو تدرّج) على سياق canvas معيّن.

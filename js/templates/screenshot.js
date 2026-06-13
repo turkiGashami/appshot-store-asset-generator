@@ -4,35 +4,38 @@
 
 import { drawDeviceFrame, clipScreen, roundRectPath } from '../deviceFrame.js';
 import { drawStatusBar } from '../statusBar.js';
-import { layoutById, drawPattern } from '../layouts.js';
+import { layoutById } from '../layouts.js';
 
 export function renderScreenshot(ctx, preset, config, helpers) {
   const { width, height } = preset;
   const {
     screenshot, title, theme, platform = 'ios', showFrame = true,
     logo = null, statusBarRatio, layoutId = 'classic', showHeaderLogo = false,
+    bgBaseId = 'gradient', bgDecors = [],
   } = config;
   const layout = layoutById(layoutId);
 
-  // 1) الخلفية + النقش الزخرفي
-  helpers.paintBackground(ctx, theme, width, height);
-  drawPattern(ctx, layout, theme, width, height);
+  // 1) الخلفية: أساس + زخارف مدموجة (مستقلة عن وضعية الجوال)
+  helpers.paintBackground(ctx, theme, width, height, { base: bgBaseId, decors: bgDecors });
 
-  // 2) منطقة العنوان (وربما الشعار) أعلى الصورة
-  // يظهر الشعار إن كان التخطيط من نوع "استعراض" أو فُعّل خيار "شعار المتجر بالأعلى".
+  // 2) منطقة الرأس: الشعار (حسب خيار الصورة) ثم العنوان إن وُجد — مع كل الوضعيات.
   let headerBottom = height * 0.04;
-  const wantLogo = (layout.titleMode === 'logo' || showHeaderLogo) && logo;
-  if (wantLogo) {
-    const logoH = height * 0.09;
+  if (showHeaderLogo && logo) {
     const lr = (logo.naturalWidth || logo.width) / (logo.naturalHeight || logo.height);
-    const logoW = Math.min(logoH * lr, width * 0.5);
+    // نحافظ على نسبة الشعار: نقيّد بالارتفاع وبالعرض معًا وننكمش بالنسبتين
+    let logoH = height * 0.09;
+    let logoW = logoH * lr;
+    const maxW = width * 0.5;
+    if (logoW > maxW) {
+      logoW = maxW;
+      logoH = logoW / lr;
+    }
     ctx.drawImage(logo, (width - logoW) / 2, height * 0.045, logoW, logoH);
     headerBottom = height * 0.045 + logoH + height * 0.02;
   }
 
-  let titleBlock = 0;
-  if (title && layout.titleMode !== 'none') {
-    titleBlock = helpers.drawTitle(ctx, title, {
+  if (title) {
+    const titleBlock = helpers.drawTitle(ctx, title, {
       centerX: width / 2,
       top: headerBottom,
       maxWidth: width * 0.86,
