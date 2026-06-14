@@ -225,6 +225,20 @@
     </section>
   </main>
 
+  <!-- أداة قص ما بعد الالتقاط: اسحب مربعًا حول شاشة الجوال -->
+  <div id="cropOverlay" class="crop-overlay" hidden>
+    <div class="crop-overlay__bar">
+      <span class="crop-overlay__hint">اسحب مربعًا حول شاشة الجوال (المربع الأرجواني مضبوط مبدئيًا على الجوال — عدّله إن لزم) ثم اضغط "قص وإضافة".</span>
+      <span class="crop-overlay__actions">
+        <button type="button" id="cropConfirmBtn" class="button button--primary button--sm">قص وإضافة</button>
+        <button type="button" id="cropCancelBtn" class="button button--ghost button--sm">إلغاء</button>
+      </span>
+    </div>
+    <div class="crop-overlay__stage">
+      <canvas id="cropCanvas"></canvas>
+    </div>
+  </div>
+
   <script src="lib/jszip.min.js"></script>
   <script type="module" src="js/app.js"></script>
 </body>

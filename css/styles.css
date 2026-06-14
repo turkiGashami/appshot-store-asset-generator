@@ -560,3 +560,43 @@ body.browse-active .stage { padding: 12px; }
   background: #f4f2f7;
 }
 .browse__empty[hidden] { display: none; }
+
+/* ---------- Crop overlay (post-capture) ---------- */
+.crop-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  background: rgba(20, 12, 30, 0.9);
+  display: flex;
+  flex-direction: column;
+}
+.crop-overlay[hidden] { display: none; }
+.crop-overlay__bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #fff;
+  color: var(--text);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.crop-overlay__hint { flex: 1; min-width: 200px; color: var(--text-muted); line-height: 1.5; }
+.crop-overlay__actions { display: flex; gap: 8px; }
+.crop-overlay__stage {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  min-height: 0;
+}
+#cropCanvas {
+  max-width: 100%;
+  max-height: 100%;
+  cursor: crosshair;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  border-radius: 4px;
+  touch-action: none;
+}

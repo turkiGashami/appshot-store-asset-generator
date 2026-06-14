@@ -239,6 +239,10 @@ const els = {
   openTabBtn: $('openTabBtn'),
   mockupEmpty: $('mockupEmpty'),
   mockupHint: $('mockupHint'),
+  cropOverlay: $('cropOverlay'),
+  cropCanvas: $('cropCanvas'),
+  cropConfirmBtn: $('cropConfirmBtn'),
+  cropCancelBtn: $('cropCancelBtn'),
   statusBarRange: $('statusBarRange'),
   statusBarVal: $('statusBarVal'),
   frameToggle: $('frameToggle'),
@@ -671,6 +675,17 @@ function phoneScreenRect() {
   return (stage || els.mockupFrame).getBoundingClientRect();
 }
 
+// يضيف صورة ملتقطة كسكرينشوت جديد.
+function addMockupShot(img) {
+  const num = String(state.shots.length + 1).padStart(2, '0');
+  state.shots.push({ ...state.defaults, name: `mockup-${num}.png`, img });
+  state.previewShot = state.shots.length - 1;
+  buildThumbs();
+  syncControls();
+  renderPreview();
+  return num;
+}
+
 els.captureMockupBtn.addEventListener('click', async () => {
   mockupHint('');
   if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
@@ -700,30 +715,125 @@ els.captureMockupBtn.addEventListener('click', async () => {
     full.height = video.videoHeight;
     full.getContext('2d').drawImage(video, 0, 0);
 
-    const rect = phoneScreenRect();
+    // مربع افتراضي على شاشة الجوال (نطاق مختلف = لا نقدر نقرأ موضعها بدقة،
+    // فنخمّن من المنطقة المرئية ثم يضبطه المستخدم في أداة القص).
     const sx = full.width / document.documentElement.clientWidth;
     const sy = full.height / document.documentElement.clientHeight;
-    const c = document.createElement('canvas');
-    c.width = Math.max(1, Math.round(rect.width * sx));
-    c.height = Math.max(1, Math.round(rect.height * sy));
-    c.getContext('2d').drawImage(
-      full,
-      rect.left * sx, rect.top * sy, rect.width * sx, rect.height * sy,
-      0, 0, c.width, c.height
-    );
-    const img = await loadImage(c.toDataURL('image/png'));
-    const num = String(state.shots.length + 1).padStart(2, '0');
-    state.shots.push({ ...state.defaults, name: `mockup-${num}.png`, img });
-    state.previewShot = state.shots.length - 1;
-    buildThumbs();
-    syncControls();
-    renderPreview();
-    mockupHint(`أُضيفت الشاشة (${num}). تنقّل والتقط المزيد أو أغلق اللوحة.`);
+    const rect = phoneScreenRect();
+    const defaultSel = {
+      x: rect.left * sx, y: rect.top * sy, w: rect.width * sx, h: rect.height * sy,
+    };
+    openCropOverlay(full, defaultSel);
   } catch (e) {
     mockupHint('فشل الالتقاط: ' + (e.message || e));
   } finally {
     stream.getTracks().forEach((t) => t.stop());
   }
+});
+
+// ---------- أداة القص بعد الالتقاط ----------
+let cropState = null; // { full, dispScale, sel:{x,y,w,h} بإحداثيات العرض, drag }
+
+function openCropOverlay(full, defaultSelFull) {
+  const canvas = els.cropCanvas;
+  const maxW = window.innerWidth - 40;
+  const maxH = window.innerHeight - 110;
+  const dispScale = Math.min(maxW / full.width, maxH / full.height, 1);
+  canvas.width = Math.round(full.width * dispScale);
+  canvas.height = Math.round(full.height * dispScale);
+
+  let sel;
+  if (defaultSelFull && defaultSelFull.w > 10) {
+    // نضيّق المربع الافتراضي على شكل جوال داخل المنطقة المرئية (الجوال موسّط)
+    const cx = (defaultSelFull.x + defaultSelFull.w / 2) * dispScale;
+    const h = Math.min(defaultSelFull.h, full.height * 0.92) * dispScale;
+    const w = Math.min(h * 0.46, defaultSelFull.w * dispScale); // نسبة جوال تقريبية
+    const top = defaultSelFull.y * dispScale + (defaultSelFull.h * dispScale - h) / 2;
+    sel = { x: cx - w / 2, y: Math.max(0, top), w, h };
+  } else {
+    sel = { x: canvas.width * 0.32, y: canvas.height * 0.12, w: canvas.width * 0.36, h: canvas.height * 0.76 };
+  }
+  cropState = { full, dispScale, sel, drag: null };
+  els.cropOverlay.hidden = false;
+  drawCrop();
+}
+
+function drawCrop() {
+  if (!cropState) return;
+  const { full, sel } = cropState;
+  const canvas = els.cropCanvas;
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.drawImage(full, 0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = 'rgba(20, 12, 30, 0.6)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  // أظهر المنطقة المحددة بوضوح
+  const s = cropState.dispScale;
+  ctx.drawImage(full, sel.x / s, sel.y / s, sel.w / s, sel.h / s, sel.x, sel.y, sel.w, sel.h);
+  ctx.strokeStyle = '#a020c0';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([6, 4]);
+  ctx.strokeRect(sel.x + 1, sel.y + 1, sel.w - 2, sel.h - 2);
+  ctx.setLineDash([]);
+}
+
+function cropPos(e) {
+  const r = els.cropCanvas.getBoundingClientRect();
+  const p = e.touches ? e.touches[0] : e;
+  return {
+    x: (p.clientX - r.left) * (els.cropCanvas.width / r.width),
+    y: (p.clientY - r.top) * (els.cropCanvas.height / r.height),
+  };
+}
+
+function cropStart(e) {
+  if (!cropState) return;
+  e.preventDefault();
+  const p = cropPos(e);
+  cropState.drag = { sx: p.x, sy: p.y };
+  cropState.sel = { x: p.x, y: p.y, w: 0, h: 0 };
+}
+function cropMove(e) {
+  if (!cropState || !cropState.drag) return;
+  e.preventDefault();
+  const p = cropPos(e);
+  const d = cropState.drag;
+  cropState.sel = {
+    x: Math.min(d.sx, p.x), y: Math.min(d.sy, p.y),
+    w: Math.abs(p.x - d.sx), h: Math.abs(p.y - d.sy),
+  };
+  drawCrop();
+}
+function cropEnd() { if (cropState) cropState.drag = null; }
+
+els.cropCanvas.addEventListener('mousedown', cropStart);
+els.cropCanvas.addEventListener('mousemove', cropMove);
+window.addEventListener('mouseup', cropEnd);
+els.cropCanvas.addEventListener('touchstart', cropStart, { passive: false });
+els.cropCanvas.addEventListener('touchmove', cropMove, { passive: false });
+window.addEventListener('touchend', cropEnd);
+
+els.cropConfirmBtn.addEventListener('click', async () => {
+  if (!cropState) return;
+  const { full, sel, dispScale } = cropState;
+  const fx = sel.x / dispScale, fy = sel.y / dispScale;
+  const fw = sel.w / dispScale, fh = sel.h / dispScale;
+  if (fw < 10 || fh < 10) { mockupHint('المربع صغير جدًا — اسحب مربعًا أكبر حول الجوال.'); return; }
+  const c = document.createElement('canvas');
+  c.width = Math.round(fw);
+  c.height = Math.round(fh);
+  c.getContext('2d').drawImage(full, fx, fy, fw, fh, 0, 0, c.width, c.height);
+  const img = await loadImage(c.toDataURL('image/png'));
+  els.cropOverlay.hidden = true;
+  cropState = null;
+  addMockupShot(img);
+  // انتقل لتاب التصميم ليرى النتيجة مركّبة فورًا (يعود للتصفّح لالتقاط المزيد)
+  showTab('design');
+});
+
+els.cropCancelBtn.addEventListener('click', () => {
+  els.cropOverlay.hidden = true;
+  cropState = null;
 });
 
 // لصق سكرينشوت مباشرة (Ctrl/Cmd+V) — يسهّل النقل من أداة الموك أب أو أي مصدر.
