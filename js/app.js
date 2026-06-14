@@ -581,8 +581,32 @@ function showTab(name) {
   document.querySelectorAll('.stage__panel').forEach((p) => {
     p.hidden = p.dataset.panel !== name;
   });
-  if (name === 'browse') ensureMockupLoaded();
+  // تاب التصفّح يأخذ كامل النافذة (يخفي الشريط الجانبي) لعرض الجوال بحجم أكبر
+  document.body.classList.toggle('browse-active', name === 'browse');
+  if (name === 'browse') {
+    ensureMockupLoaded();
+    fitMockupFrame();
+  }
 }
+
+// أداة المعاينة تُرسم بمقاس سطح المكتب (الجوال بارز)؛ نصغّرها لتُعرض كاملة داخل التاب.
+const MOCK_W = 1200;
+const MOCK_H = 820;
+function fitMockupFrame() {
+  const stage = document.querySelector('.browse__stage');
+  const scaler = document.querySelector('.browse__scaler');
+  if (!stage || !scaler) return;
+  els.mockupFrame.style.width = MOCK_W + 'px';
+  els.mockupFrame.style.height = MOCK_H + 'px';
+  // نلائم العرض والارتفاع معًا ليظهر الجوال + خانة الرابط كاملةً بدون تمرير
+  const scale = Math.min(stage.clientWidth / MOCK_W, stage.clientHeight / MOCK_H, 1);
+  scaler.style.transform = `translate(-50%, -50%) scale(${scale})`;
+  scaler.style.width = MOCK_W + 'px';
+  scaler.style.height = MOCK_H + 'px';
+}
+window.addEventListener('resize', () => {
+  if (document.body.classList.contains('browse-active')) fitMockupFrame();
+});
 
 // يحمّل الأداة الرسمية مرة واحدة (lazy) ويحاول تعبئة رابط المتجر تلقائيًا.
 function ensureMockupLoaded() {
@@ -629,23 +653,22 @@ els.openTabBtn.addEventListener('click', () => {
 });
 
 // مستطيل القص: شاشة الجوال داخل الأداة الرسمية إن أمكن الوصول إليها (same-origin)،
-// وإلا فإطار اللوحة كاملًا (تشغيل محلي cross-origin → المستخدم يقصّ يدويًا/يلصق).
+// وإلا منطقة العرض المرئية (تشغيل على نطاق مختلف cross-origin → المستخدم يقصّ يدويًا/يلصق).
 function phoneScreenRect() {
-  const fRect = els.mockupFrame.getBoundingClientRect();
   try {
     const doc = els.mockupFrame.contentDocument;
-    // الأداة الرسمية ترسم شاشة الجوال في .phone__screen
+    // الأداة الرسمية ترسم شاشة الجوال في .phone__screen؛ getBoundingClientRect
+    // يعيد إحداثيات الشاشة الفعلية (متأثرة بالتصغير) في فضاء الصفحة.
     const screen = doc && doc.querySelector('.phone__screen, .phone__frame, .phone');
     if (screen) {
       const r = screen.getBoundingClientRect();
-      if (r.width > 20 && r.height > 20) {
-        return { left: fRect.left + r.left, top: fRect.top + r.top, width: r.width, height: r.height };
-      }
+      if (r.width > 20 && r.height > 20) return r;
     }
   } catch (e) {
-    /* cross-origin — نقصّ على إطار اللوحة كاملًا */
+    /* cross-origin — نقصّ على منطقة العرض المرئية */
   }
-  return fRect;
+  const stage = document.querySelector('.browse__stage');
+  return (stage || els.mockupFrame).getBoundingClientRect();
 }
 
 els.captureMockupBtn.addEventListener('click', async () => {

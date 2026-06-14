@@ -497,9 +497,13 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
 
 /* ---------- Browse tab (embedded official preview tool) ---------- */
 .browse {
-  max-width: 760px;
+  max-width: 100%;
   gap: 0;
 }
+/* تاب التصفّح يأخذ كامل عرض النافذة (يخفي الشريط الجانبي) ليتسع للجوال بحجم سطح المكتب */
+body.browse-active { grid-template-columns: 1fr; }
+body.browse-active .sidebar { display: none; }
+body.browse-active .stage { padding: 12px; }
 .browse__bar {
   display: flex;
   align-items: center;
@@ -523,17 +527,23 @@ input[type="range"] { width: 100%; accent-color: var(--accent); }
   width: 100%;
   flex: 1;
   min-height: 0;
-  background: #fff;
+  background: #ece8f1;
   border: 1px solid var(--border);
   border-top: 0;
   border-radius: 0 0 12px 12px;
   overflow: hidden;
 }
-.browse__stage iframe {
-  width: 100%;
-  height: 100%;
-  border: 0;
+/* غلاف يُصغّر أداة المعاينة (المرسومة بمقاس سطح المكتب) لتُعرض كاملة */
+.browse__scaler {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform-origin: center center;
+  /* transform يُحسب في app.js (translate(-50%,-50%) scale) */
+}
+.browse__scaler iframe {
   display: block;
+  border: 0;
   background: #fff;
 }
 .browse__empty {
