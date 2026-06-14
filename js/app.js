@@ -656,21 +656,36 @@ els.openTabBtn.addEventListener('click', () => {
   window.open(MOCKUP_TOOL_URL, '_blank', 'noopener');
 });
 
-// مستطيل القص: شاشة الجوال داخل الأداة الرسمية إن أمكن الوصول إليها (same-origin)،
-// وإلا منطقة العرض المرئية (تشغيل على نطاق مختلف cross-origin → المستخدم يقصّ يدويًا/يلصق).
-function phoneScreenRect() {
+// مستطيل شاشة الجوال بدقة — يعمل فقط عند same-origin (نفس نطاق الموك أب).
+// يحوّل إحداثيات العنصر داخل الإطار إلى فضاء النافذة العليا مع مراعاة التصغير.
+// يعيد null عند cross-origin (نطاق مختلف) فنلجأ للقص اليدوي.
+function preciseScreenRect() {
   try {
     const doc = els.mockupFrame.contentDocument;
-    // الأداة الرسمية ترسم شاشة الجوال في .phone__screen؛ getBoundingClientRect
-    // يعيد إحداثيات الشاشة الفعلية (متأثرة بالتصغير) في فضاء الصفحة.
-    const screen = doc && doc.querySelector('.phone__screen, .phone__frame, .phone');
-    if (screen) {
-      const r = screen.getBoundingClientRect();
-      if (r.width > 20 && r.height > 20) return r;
-    }
+    if (!doc) return null;
+    const screen = doc.querySelector('.phone__screen') ||
+                   doc.querySelector('.phone__frame') ||
+                   doc.querySelector('.phone');
+    if (!screen) return null;
+    const r = screen.getBoundingClientRect(); // بإحداثيات نافذة الإطار
+    if (r.width <= 20 || r.height <= 20) return null;
+    const f = els.mockupFrame.getBoundingClientRect();
+    // معامل التصغير = العرض المعروض ÷ العرض المنطقي للإطار
+    const scaleX = f.width / (els.mockupFrame.offsetWidth || f.width);
+    const scaleY = f.height / (els.mockupFrame.offsetHeight || f.height);
+    return {
+      left: f.left + r.left * scaleX,
+      top: f.top + r.top * scaleY,
+      width: r.width * scaleX,
+      height: r.height * scaleY,
+    };
   } catch (e) {
-    /* cross-origin — نقصّ على منطقة العرض المرئية */
+    return null; // cross-origin
   }
+}
+
+// تخمين منطقة الجوال (للمربع الافتراضي في القص اليدوي عند cross-origin).
+function guessScreenRect() {
   const stage = document.querySelector('.browse__stage');
   return (stage || els.mockupFrame).getBoundingClientRect();
 }
@@ -715,15 +730,31 @@ els.captureMockupBtn.addEventListener('click', async () => {
     full.height = video.videoHeight;
     full.getContext('2d').drawImage(video, 0, 0);
 
-    // مربع افتراضي على شاشة الجوال (نطاق مختلف = لا نقدر نقرأ موضعها بدقة،
-    // فنخمّن من المنطقة المرئية ثم يضبطه المستخدم في أداة القص).
     const sx = full.width / document.documentElement.clientWidth;
     const sy = full.height / document.documentElement.clientHeight;
-    const rect = phoneScreenRect();
-    const defaultSel = {
+
+    // same-origin (نفس نطاق الموك أب): نعرف موضع الشاشة بدقة → قص تلقائي بلا تدخّل.
+    const precise = preciseScreenRect();
+    if (precise) {
+      const c = document.createElement('canvas');
+      c.width = Math.max(1, Math.round(precise.width * sx));
+      c.height = Math.max(1, Math.round(precise.height * sy));
+      c.getContext('2d').drawImage(
+        full,
+        precise.left * sx, precise.top * sy, precise.width * sx, precise.height * sy,
+        0, 0, c.width, c.height
+      );
+      const img = await loadImage(c.toDataURL('image/png'));
+      addMockupShot(img);
+      showTab('design');
+      return;
+    }
+
+    // نطاق مختلف (cross-origin): مربع افتراضي على الجوال ثم يضبطه المستخدم.
+    const rect = guessScreenRect();
+    openCropOverlay(full, {
       x: rect.left * sx, y: rect.top * sy, w: rect.width * sx, h: rect.height * sy,
-    };
-    openCropOverlay(full, defaultSel);
+    });
   } catch (e) {
     mockupHint('فشل الالتقاط: ' + (e.message || e));
   } finally {
