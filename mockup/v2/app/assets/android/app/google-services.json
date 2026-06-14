@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "849666711107",
+    "project_id": "entaj-99888",
+    "storage_bucket": "entaj-99888.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:849666711107:android:7f7bb4d90df47b49af3ef6",
+        "android_client_info": {
+          "package_name": "com.appsbunches.entaj"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "849666711107-iccvep4rcj03u7osjp6hdq7amcnophjk.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_XjiRjwb5SNraj_62Zv7qBC9RcWc85KI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "849666711107-iccvep4rcj03u7osjp6hdq7amcnophjk.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

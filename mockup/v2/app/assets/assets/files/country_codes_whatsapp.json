@@ -1,0 +1,1037 @@
+[
+  {
+    "code": "AD",
+    "key": "+376",
+    "maxLength": 9
+  },
+  {
+    "code": "AE",
+    "key": "+971",
+    "maxLength": 9
+  },
+  {
+    "code": "AF",
+    "key": "+93",
+    "maxLength": 9
+  },
+  {
+    "code": "AG",
+    "key": "+1",
+    "maxLength": 10
+  },
+  {
+    "code": "AL",
+    "key": "+355",
+    "maxLength": 9
+  },
+  {
+    "code": "AM",
+    "key": "+374",
+    "maxLength": 8
+  },
+  {
+    "code": "AO",
+    "key": "+244",
+    "maxLength": 9
+  },
+  {
+    "code": "AQ",
+    "key": "+672",
+    "maxLength": 9
+  },
+  {
+    "code": "AR",
+    "key": "+54",
+    "maxLength": 10
+  },
+  {
+    "code": "AT",
+    "key": "+43",
+    "maxLength": 10
+  },
+  {
+    "code": "AU",
+    "key": "+61",
+    "maxLength": 9
+  },
+  {
+    "code": "AW",
+    "key": "+297",
+    "maxLength": 7
+  },
+  {
+    "code": "AX",
+    "key": "+358",
+    "maxLength": 10
+  },
+  {
+    "code": "AZ",
+    "key": "+994",
+    "maxLength": 9
+  },
+  {
+    "code": "BA",
+    "key": "+387",
+    "maxLength": 8
+  },
+  {
+    "code": "BD",
+    "key": "+880",
+    "maxLength": 10
+  },
+  {
+    "code": "BE",
+    "key": "+32",
+    "maxLength": 9
+  },
+  {
+    "code": "BF",
+    "key": "+226",
+    "maxLength": 8
+  },
+  {
+    "code": "BG",
+    "key": "+359",
+    "maxLength": 9
+  },
+  {
+    "code": "BH",
+    "key": "+973",
+    "maxLength": 8
+  },
+  {
+    "code": "BI",
+    "key": "+257",
+    "maxLength": 8
+  },
+  {
+    "code": "BJ",
+    "key": "+229",
+    "maxLength": 8
+  },
+  {
+    "code": "BL",
+    "key": "+590",
+    "maxLength": 9
+  },
+  {
+    "code": "BN",
+    "key": "+673",
+    "maxLength": 7
+  },
+  {
+    "code": "BO",
+    "key": "+591",
+    "maxLength": 8
+  },
+  {
+    "code": "BQ",
+    "key": "+599",
+    "maxLength": 7
+  },
+  {
+    "code": "BR",
+    "key": "+55",
+    "maxLength": 11
+  },
+  {
+    "code": "BT",
+    "key": "+975",
+    "maxLength": 8
+  },
+  {
+    "code": "BV",
+    "key": "+47",
+    "maxLength": 8
+  },
+  {
+    "code": "BW",
+    "key": "+267",
+    "maxLength": 8
+  },
+  {
+    "code": "BY",
+    "key": "+375",
+    "maxLength": 9
+  },
+  {
+    "code": "BZ",
+    "key": "+501",
+    "maxLength": 7
+  },
+  {
+    "code": "CD",
+    "key": "+243",
+    "maxLength": 9
+  },
+  {
+    "code": "CF",
+    "key": "+236",
+    "maxLength": 8
+  },
+  {
+    "code": "CG",
+    "key": "+242",
+    "maxLength": 9
+  },
+  {
+    "code": "CH",
+    "key": "+41",
+    "maxLength": 9
+  },
+  {
+    "code": "CI",
+    "key": "+225",
+    "maxLength": 10
+  },
+  {
+    "code": "CK",
+    "key": "+682",
+    "maxLength": 5
+  },
+  {
+    "code": "CL",
+    "key": "+56",
+    "maxLength": 9
+  },
+  {
+    "code": "CM",
+    "key": "+237",
+    "maxLength": 9
+  },
+  {
+    "code": "CN",
+    "key": "+86",
+    "maxLength": 11
+  },
+  {
+    "code": "CO",
+    "key": "+57",
+    "maxLength": 10
+  },
+  {
+    "code": "CR",
+    "key": "+506",
+    "maxLength": 8
+  },
+  {
+    "code": "CU",
+    "key": "+53",
+    "maxLength": 8
+  },
+  {
+    "code": "CV",
+    "key": "+238",
+    "maxLength": 7
+  },
+  {
+    "code": "CY",
+    "key": "+357",
+    "maxLength": 8
+  },
+  {
+    "code": "CZ",
+    "key": "+420",
+    "maxLength": 9
+  },
+  {
+    "code": "DE",
+    "key": "+49",
+    "maxLength": 11
+  },
+  {
+    "code": "DJ",
+    "key": "+253",
+    "maxLength": 8
+  },
+  {
+    "code": "DK",
+    "key": "+45",
+    "maxLength": 8
+  },
+  {
+    "code": "DZ",
+    "key": "+213",
+    "maxLength": 9
+  },
+  {
+    "code": "EC",
+    "key": "+593",
+    "maxLength": 9
+  },
+  {
+    "code": "EE",
+    "key": "+372",
+    "maxLength": 8
+  },
+  {
+    "code": "EG",
+    "key": "+20",
+    "maxLength": 10
+  },
+  {
+    "code": "EH",
+    "key": "+212",
+    "maxLength": 9
+  },
+  {
+    "code": "ER",
+    "key": "+291",
+    "maxLength": 7
+  },
+  {
+    "code": "ES",
+    "key": "+34",
+    "maxLength": 9
+  },
+  {
+    "code": "ET",
+    "key": "+251",
+    "maxLength": 9
+  },
+  {
+    "code": "FJ",
+    "key": "+679",
+    "maxLength": 7
+  },
+  {
+    "code": "FK",
+    "key": "+500",
+    "maxLength": 5
+  },
+  {
+    "code": "FM",
+    "key": "+691",
+    "maxLength": 7
+  },
+  {
+    "code": "FO",
+    "key": "+298",
+    "maxLength": 6
+  },
+  {
+    "code": "FR",
+    "key": "+33",
+    "maxLength": 9
+  },
+  {
+    "code": "GA",
+    "key": "+241",
+    "maxLength": 7
+  },
+  {
+    "code": "GB",
+    "key": "+44",
+    "maxLength": 10
+  },
+  {
+    "code": "GE",
+    "key": "+995",
+    "maxLength": 9
+  },
+  {
+    "code": "GF",
+    "key": "+594",
+    "maxLength": 9
+  },
+  {
+    "code": "GH",
+    "key": "+233",
+    "maxLength": 10
+  },
+  {
+    "code": "GI",
+    "key": "+350",
+    "maxLength": 8
+  },
+  {
+    "code": "GL",
+    "key": "+299",
+    "maxLength": 6
+  },
+  {
+    "code": "GM",
+    "key": "+220",
+    "maxLength": 7
+  },
+  {
+    "code": "GN",
+    "key": "+224",
+    "maxLength": 9
+  },
+  {
+    "code": "GQ",
+    "key": "+240",
+    "maxLength": 9
+  },
+  {
+    "code": "GR",
+    "key": "+30",
+    "maxLength": 10
+  },
+  {
+    "code": "GT",
+    "key": "+502",
+    "maxLength": 8
+  },
+  {
+    "code": "GW",
+    "key": "+245",
+    "maxLength": 9
+  },
+  {
+    "code": "GY",
+    "key": "+595",
+    "maxLength": 9
+  },
+  {
+    "code": "HK",
+    "key": "+852",
+    "maxLength": 8
+  },
+  {
+    "code": "HN",
+    "key": "+504",
+    "maxLength": 8
+  },
+  {
+    "code": "HR",
+    "key": "+385",
+    "maxLength": 9
+  },
+  {
+    "code": "HT",
+    "key": "+509",
+    "maxLength": 8
+  },
+  {
+    "code": "HU",
+    "key": "+36",
+    "maxLength": 9
+  },
+  {
+    "code": "ID",
+    "key": "+62",
+    "maxLength": 11
+  },
+  {
+    "code": "IE",
+    "key": "+353",
+    "maxLength": 9
+  },
+  {
+    "code": "IL",
+    "key": "+972",
+    "maxLength": 9
+  },
+  {
+    "code": "IN",
+    "key": "+91",
+    "maxLength": 10
+  },
+  {
+    "code": "IO",
+    "key": "+246",
+    "maxLength": 7
+  },
+  {
+    "code": "IQ",
+    "key": "+964",
+    "maxLength": 10
+  },
+  {
+    "code": "IR",
+    "key": "+98",
+    "maxLength": 10
+  },
+  {
+    "code": "IS",
+    "key": "+354",
+    "maxLength": 7
+  },
+  {
+    "code": "IT",
+    "key": "+39",
+    "maxLength": 10
+  },
+  {
+    "code": "JO",
+    "key": "+962",
+    "maxLength": 10
+  },
+  {
+    "code": "JP",
+    "key": "+81",
+    "maxLength": 10
+  },
+  {
+    "code": "KE",
+    "key": "+254",
+    "maxLength": 10
+  },
+  {
+    "code": "KG",
+    "key": "+996",
+    "maxLength": 9
+  },
+  {
+    "code": "KH",
+    "key": "+855",
+    "maxLength": 9
+  },
+  {
+    "code": "KI",
+    "key": "+686",
+    "maxLength": 8
+  },
+  {
+    "code": "KM",
+    "key": "+269",
+    "maxLength": 7
+  },
+  {
+    "code": "KP",
+    "key": "+850",
+    "maxLength": 10
+  },
+  {
+    "code": "KR",
+    "key": "+82",
+    "maxLength": 10
+  },
+  {
+    "code": "KW",
+    "key": "+965",
+    "maxLength": 8
+  },
+  {
+    "code": "KY",
+    "key": "+345",
+    "maxLength": 7
+  },
+  {
+    "code": "KZ",
+    "key": "+7",
+    "maxLength": 10
+  },
+  {
+    "code": "LA",
+    "key": "+856",
+    "maxLength": 10
+  },
+  {
+    "code": "LB",
+    "key": "+961",
+    "maxLength": 8
+  },
+  {
+    "code": "LI",
+    "key": "+423",
+    "maxLength": 7
+  },
+  {
+    "code": "LK",
+    "key": "+94",
+    "maxLength": 9
+  },
+  {
+    "code": "LR",
+    "key": "+231",
+    "maxLength": 8
+  },
+  {
+    "code": "LS",
+    "key": "+266",
+    "maxLength": 8
+  },
+  {
+    "code": "LT",
+    "key": "+370",
+    "maxLength": 8
+  },
+  {
+    "code": "LU",
+    "key": "+352",
+    "maxLength": 9
+  },
+  {
+    "code": "LV",
+    "key": "+371",
+    "maxLength": 8
+  },
+  {
+    "code": "LY",
+    "key": "+218",
+    "maxLength": 10
+  },
+  {
+    "code": "MC",
+    "key": "+377",
+    "maxLength": 9
+  },
+  {
+    "code": "MD",
+    "key": "+373",
+    "maxLength": 8
+  },
+  {
+    "code": "ME",
+    "key": "+382",
+    "maxLength": 8
+  },
+  {
+    "code": "MG",
+    "key": "+261",
+    "maxLength": 9
+  },
+  {
+    "code": "MH",
+    "key": "+692",
+    "maxLength": 7
+  },
+  {
+    "code": "MK",
+    "key": "+389",
+    "maxLength": 8
+  },
+  {
+    "code": "ML",
+    "key": "+223",
+    "maxLength": 8
+  },
+  {
+    "code": "MM",
+    "key": "+95",
+    "maxLength": 9
+  },
+  {
+    "code": "MN",
+    "key": "+976",
+    "maxLength": 8
+  },
+  {
+    "code": "MO",
+    "key": "+853",
+    "maxLength": 8
+  },
+  {
+    "code": "MQ",
+    "key": "+596",
+    "maxLength": 9
+  },
+  {
+    "code": "MR",
+    "key": "+222",
+    "maxLength": 8
+  },
+  {
+    "code": "MT",
+    "key": "+356",
+    "maxLength": 8
+  },
+  {
+    "code": "MU",
+    "key": "+230",
+    "maxLength": 8
+  },
+  {
+    "code": "MV",
+    "key": "+960",
+    "maxLength": 7
+  },
+  {
+    "code": "MW",
+    "key": "+265",
+    "maxLength": 9
+  },
+  {
+    "code": "MX",
+    "key": "+52",
+    "maxLength": 10
+  },
+  {
+    "code": "MY",
+    "key": "+60",
+    "maxLength": 10
+  },
+  {
+    "code": "MZ",
+    "key": "+258",
+    "maxLength": 9
+  },
+  {
+    "code": "NA",
+    "key": "+264",
+    "maxLength": 9
+  },
+  {
+    "code": "NC",
+    "key": "+687",
+    "maxLength": 6
+  },
+  {
+    "code": "NE",
+    "key": "+227",
+    "maxLength": 8
+  },
+  {
+    "code": "NG",
+    "key": "+234",
+    "maxLength": 10
+  },
+  {
+    "code": "NI",
+    "key": "+505",
+    "maxLength": 8
+  },
+  {
+    "code": "NL",
+    "key": "+31",
+    "maxLength": 9
+  },
+  {
+    "code": "NP",
+    "key": "+977",
+    "maxLength": 10
+  },
+  {
+    "code": "NR",
+    "key": "+674",
+    "maxLength": 7
+  },
+  {
+    "code": "NU",
+    "key": "+683",
+    "maxLength": 4
+  },
+  {
+    "code": "NZ",
+    "key": "+64",
+    "maxLength": 9
+  },
+  {
+    "code": "OM",
+    "key": "+968",
+    "maxLength": 8
+  },
+  {
+    "code": "PA",
+    "key": "+507",
+    "maxLength": 8
+  },
+  {
+    "code": "PE",
+    "key": "+51",
+    "maxLength": 9
+  },
+  {
+    "code": "PF",
+    "key": "+689",
+    "maxLength": 8
+  },
+  {
+    "code": "PG",
+    "key": "+675",
+    "maxLength": 8
+  },
+  {
+    "code": "PH",
+    "key": "+63",
+    "maxLength": 10
+  },
+  {
+    "code": "PK",
+    "key": "+92",
+    "maxLength": 10
+  },
+  {
+    "code": "PL",
+    "key": "+48",
+    "maxLength": 9
+  },
+  {
+    "code": "PM",
+    "key": "+508",
+    "maxLength": 6
+  },
+  {
+    "code": "PN",
+    "key": "+872",
+    "maxLength": 9
+  },
+  {
+    "code": "PS",
+    "key": "+970",
+    "maxLength": 9
+  },
+  {
+    "code": "PT",
+    "key": "+351",
+    "maxLength": 9
+  },
+  {
+    "code": "PW",
+    "key": "+680",
+    "maxLength": 7
+  },
+  {
+    "code": "QA",
+    "key": "+974",
+    "maxLength": 8
+  },
+  {
+    "code": "RE",
+    "key": "+262",
+    "maxLength": 9
+  },
+  {
+    "code": "RO",
+    "key": "+40",
+    "maxLength": 9
+  },
+  {
+    "code": "RS",
+    "key": "+381",
+    "maxLength": 9
+  },
+  {
+    "code": "RW",
+    "key": "+250",
+    "maxLength": 9
+  },
+  {
+    "code": "SA",
+    "key": "+966",
+    "maxLength": 9
+  },
+  {
+    "code": "SB",
+    "key": "+677",
+    "maxLength": 7
+  },
+  {
+    "code": "SC",
+    "key": "+248",
+    "maxLength": 7
+  },
+  {
+    "code": "SD",
+    "key": "+249",
+    "maxLength": 9
+  },
+  {
+    "code": "SE",
+    "key": "+46",
+    "maxLength": 9
+  },
+  {
+    "code": "SG",
+    "key": "+65",
+    "maxLength": 8
+  },
+  {
+    "code": "SH",
+    "key": "+290",
+    "maxLength": 4
+  },
+  {
+    "code": "SI",
+    "key": "+386",
+    "maxLength": 8
+  },
+  {
+    "code": "SK",
+    "key": "+421",
+    "maxLength": 9
+  },
+  {
+    "code": "SL",
+    "key": "+232",
+    "maxLength": 8
+  },
+  {
+    "code": "SM",
+    "key": "+378",
+    "maxLength": 10
+  },
+  {
+    "code": "SN",
+    "key": "+221",
+    "maxLength": 9
+  },
+  {
+    "code": "SO",
+    "key": "+252",
+    "maxLength": 8
+  },
+  {
+    "code": "SR",
+    "key": "+597",
+    "maxLength": 7
+  },
+  {
+    "code": "SS",
+    "key": "+211",
+    "maxLength": 9
+  },
+  {
+    "code": "ST",
+    "key": "+239",
+    "maxLength": 7
+  },
+  {
+    "code": "SV",
+    "key": "+503",
+    "maxLength": 8
+  },
+  {
+    "code": "SY",
+    "key": "+963",
+    "maxLength": 9
+  },
+  {
+    "code": "SZ",
+    "key": "+268",
+    "maxLength": 8
+  },
+  {
+    "code": "TD",
+    "key": "+235",
+    "maxLength": 8
+  },
+  {
+    "code": "TG",
+    "key": "+228",
+    "maxLength": 8
+  },
+  {
+    "code": "TH",
+    "key": "+66",
+    "maxLength": 9
+  },
+  {
+    "code": "TJ",
+    "key": "+992",
+    "maxLength": 9
+  },
+  {
+    "code": "TK",
+    "key": "+690",
+    "maxLength": 4
+  },
+  {
+    "code": "TL",
+    "key": "+670",
+    "maxLength": 8
+  },
+  {
+    "code": "TM",
+    "key": "+993",
+    "maxLength": 8
+  },
+  {
+    "code": "TN",
+    "key": "+216",
+    "maxLength": 8
+  },
+  {
+    "code": "TO",
+    "key": "+676",
+    "maxLength": 7
+  },
+  {
+    "code": "TR",
+    "key": "+90",
+    "maxLength": 10
+  },
+  {
+    "code": "TV",
+    "key": "+688",
+    "maxLength": 6
+  },
+  {
+    "code": "TW",
+    "key": "+886",
+    "maxLength": 9
+  },
+  {
+    "code": "TZ",
+    "key": "+255",
+    "maxLength": 9
+  },
+  {
+    "code": "UA",
+    "key": "+380",
+    "maxLength": 9
+  },
+  {
+    "code": "UG",
+    "key": "+256",
+    "maxLength": 9
+  },
+  {
+    "code": "UY",
+    "key": "+598",
+    "maxLength": 8
+  },
+  {
+    "code": "UZ",
+    "key": "+998",
+    "maxLength": 9
+  },
+  {
+    "code": "VA",
+    "key": "+379",
+    "maxLength": 10
+  },
+  {
+    "code": "VE",
+    "key": "+58",
+    "maxLength": 10
+  },
+  {
+    "code": "VN",
+    "key": "+84",
+    "maxLength": 10
+  },
+  {
+    "code": "VU",
+    "key": "+678",
+    "maxLength": 7
+  },
+  {
+    "code": "WF",
+    "key": "+681",
+    "maxLength": 6
+  },
+  {
+    "code": "WS",
+    "key": "+685",
+    "maxLength": 7
+  },
+  {
+    "code": "XK",
+    "key": "+383",
+    "maxLength": 8
+  },
+  {
+    "code": "YE",
+    "key": "+967",
+    "maxLength": 9
+  },
+  {
+    "code": "ZA",
+    "key": "+27",
+    "maxLength": 9
+  },
+  {
+    "code": "ZM",
+    "key": "+260",
+    "maxLength": 9
+  },
+  {
+    "code": "ZW",
+    "key": "+263",
+    "maxLength": 9
+  }
+]

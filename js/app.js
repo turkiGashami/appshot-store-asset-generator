@@ -572,9 +572,10 @@ function mockupHint(text) {
   els.mockupHint.textContent = text || MOCKUP_HINT_DEFAULT;
 }
 
-// أداة معاينة التطبيق الرسمية (تطبيق Flutter يرندر المتجر كتطبيق حقيقي).
-// نضمّنها كما هي بدل محاولة محاكاة الرندر — تعطي نفس جودة الموقع الرسمي تمامًا.
-const MOCKUP_TOOL_URL = 'https://appsbunches.github.io/zid_appsbunche_app_mockup/v2/';
+// أداة معاينة التطبيق (تطبيق Flutter) — منسوخة داخل ريبونا تحت mockup/v2/ لتكون
+// same-origin مع أداتنا، فيعمل قراءة موضع شاشة الجوال والقص التلقائي الدقيق.
+// (canvaskit يُحمَّل من gstatic CDN، فلم نحتج نسخه.)
+const MOCKUP_TOOL_URL = 'mockup/v2/';
 
 // ---------- تبويبات منطقة العرض ----------
 // تبديل بين "تصميم الصورة" و"تصفّح المتجر"، وتحميل أداة المعاينة عند أول دخول للتبويب.
