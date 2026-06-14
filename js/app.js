@@ -664,7 +664,9 @@ function preciseScreenRect() {
   try {
     const doc = els.mockupFrame.contentDocument;
     if (!doc) return null;
-    const screen = doc.querySelector('.phone__screen') ||
+    // #preview-iframe = محتوى المتجر فقط (تحت شريط الحالة) — قص نظيف بلا الشريط الأسود/notch.
+    const screen = doc.getElementById('preview-iframe') ||
+                   doc.querySelector('.phone__screen') ||
                    doc.querySelector('.phone__frame') ||
                    doc.querySelector('.phone');
     if (!screen) return null;
@@ -699,7 +701,7 @@ function enlargeForCapture() {
   let doc;
   try { doc = els.mockupFrame.contentDocument; } catch (e) { return false; }
   if (!doc || !scaler || !stage) return false;
-  const screen = doc.querySelector('.phone__screen');
+  const screen = doc.getElementById('preview-iframe') || doc.querySelector('.phone__screen');
   if (!screen) return false;
   const ir = screen.getBoundingClientRect(); // إحداثيات داخل الإطار (فضاء 1200×820)
   if (ir.width < 20) return false;
