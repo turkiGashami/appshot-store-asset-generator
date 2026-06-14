@@ -600,3 +600,16 @@ body.browse-active .stage { padding: 12px; }
   border-radius: 4px;
   touch-action: none;
 }
+
+/* ---------- Build tag (cache-bust indicator) ---------- */
+.build-tag {
+  align-self: center;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--panel-2);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 3px 9px;
+  margin-inline-start: 6px;
+}
