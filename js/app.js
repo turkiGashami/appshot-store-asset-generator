@@ -693,38 +693,6 @@ function guessScreenRect() {
   return (stage || els.mockupFrame).getBoundingClientRect();
 }
 
-// قبل الالتقاط: نكبّر الجوال لأقصى حجم يملأ منطقة العرض (مع توسيطه) لرفع دقة
-// اللقطة قدر الإمكان (الدقة = حجم الجوال على الشاشة × كثافة البكسل). same-origin فقط.
-function enlargeForCapture() {
-  const scaler = document.querySelector('.browse__scaler');
-  const stage = document.querySelector('.browse__stage');
-  let doc;
-  try { doc = els.mockupFrame.contentDocument; } catch (e) { return false; }
-  if (!doc || !scaler || !stage) return false;
-  const screen = doc.getElementById('preview-iframe') || doc.querySelector('.phone__screen');
-  if (!screen) return false;
-  const ir = screen.getBoundingClientRect(); // إحداثيات داخل الإطار (فضاء 1200×820)
-  if (ir.width < 20) return false;
-  const st = stage.getBoundingClientRect();
-  const phoneCx = ir.left + ir.width / 2;
-  const phoneCy = ir.top + ir.height / 2;
-  const s = Math.min((st.height * 0.98) / ir.height, (st.width * 0.98) / ir.width);
-  scaler.style.transformOrigin = `${phoneCx}px ${phoneCy}px`;
-  scaler.style.left = (st.width / 2 - phoneCx) + 'px';
-  scaler.style.top = (st.height / 2 - phoneCy) + 'px';
-  scaler.style.transform = `scale(${s})`;
-  return true;
-}
-
-// إعادة العرض لوضعه الطبيعي بعد الالتقاط.
-function restoreMockupSize() {
-  const scaler = document.querySelector('.browse__scaler');
-  if (!scaler) return;
-  scaler.style.left = '50%';
-  scaler.style.top = '50%';
-  scaler.style.transformOrigin = 'center center';
-  fitMockupFrame();
-}
 
 // يضيف صورة ملتقطة كسكرينشوت جديد.
 function addMockupShot(img) {
@@ -743,20 +711,16 @@ els.captureMockupBtn.addEventListener('click', async () => {
     mockupHint('متصفحك لا يدعم التقاط الشاشة — خذ سكرينشوت يدويًا والصقه بـ Ctrl+V.');
     return;
   }
-  // same-origin: نكبّر الجوال لأقصى حجم قبل الالتقاط لرفع الدقة.
-  const enlarged = enlargeForCapture();
-  if (enlarged) await new Promise((r) => setTimeout(r, 280)); // انتظار إعادة التخطيط
-
+  // نلتقط بالحجم المعروض كما هو — بلا تكبير (التكبير يسبّب قفزة مفاجئة وصورة مغبّشة).
   let stream;
   try {
     stream = await navigator.mediaDevices.getDisplayMedia({
-      video: { displaySurface: 'browser', width: { ideal: 3840 }, height: { ideal: 2160 } },
+      video: { displaySurface: 'browser' },
       preferCurrentTab: true,       // Chrome: مشاركة التبويب الحالي بنقرة واحدة
       selfBrowserSurface: 'include',
       audio: false,
     });
   } catch (e) {
-    restoreMockupSize();
     mockupHint('أُلغي الالتقاط (لازم توافق على مشاركة التبويب).');
     return;
   }
@@ -800,7 +764,6 @@ els.captureMockupBtn.addEventListener('click', async () => {
     mockupHint('فشل الالتقاط: ' + (e.message || e));
   } finally {
     stream.getTracks().forEach((t) => t.stop());
-    restoreMockupSize();
   }
 });
 
