@@ -597,17 +597,59 @@ function showTab(name) {
 // أداة المعاينة تُرسم بمقاس سطح المكتب (الجوال بارز)؛ نصغّرها لتُعرض كاملة داخل التاب.
 const MOCK_W = 1200;
 const MOCK_H = 820;
+// موضع شاشة الجوال داخل الموك أب (بإحداثيات محتوى الإطار = فضاء scaler)، أو null.
+function innerPhoneRect() {
+  try {
+    const doc = els.mockupFrame.contentDocument;
+    if (!doc) return null;
+    const el = doc.getElementById('preview-iframe') || doc.querySelector('.phone__screen');
+    if (!el) return null;
+    // نكبّر فقط بعد تحميل متجر فعلي (لا قبلها — يبقى الفورم ظاهرًا لإدخال الرابط).
+    const appIframe = doc.getElementById('preview-iframe');
+    const loaded = appIframe && appIframe.src && appIframe.src !== 'about:blank';
+    if (!loaded) return null;
+    const r = el.getBoundingClientRect();
+    if (r.width < 20) return null;
+    return { x: r.left, y: r.top, w: r.width, h: r.height };
+  } catch (e) {
+    return null; // cross-origin
+  }
+}
+
 function fitMockupFrame() {
   const stage = document.querySelector('.browse__stage');
   const scaler = document.querySelector('.browse__scaler');
   if (!stage || !scaler) return;
   els.mockupFrame.style.width = MOCK_W + 'px';
   els.mockupFrame.style.height = MOCK_H + 'px';
-  // نلائم العرض والارتفاع معًا ليظهر الجوال + خانة الرابط كاملةً بدون تمرير
-  const scale = Math.min(stage.clientWidth / MOCK_W, stage.clientHeight / MOCK_H, 1);
-  scaler.style.transform = `translate(-50%, -50%) scale(${scale})`;
   scaler.style.width = MOCK_W + 'px';
   scaler.style.height = MOCK_H + 'px';
+
+  // متجر محمّل (same-origin): نكبّر الجوال ليملأ المنطقة → أقصى دقة ممكنة، ثابتة.
+  const phone = innerPhoneRect();
+  if (phone) {
+    const s = Math.min((stage.clientHeight * 0.98) / phone.h, (stage.clientWidth * 0.98) / phone.w);
+    const cx = phone.x + phone.w / 2;
+    const cy = phone.y + phone.h / 2;
+    scaler.style.transformOrigin = `${cx}px ${cy}px`;
+    scaler.style.left = (stage.clientWidth / 2 - cx) + 'px';
+    scaler.style.top = (stage.clientHeight / 2 - cy) + 'px';
+    scaler.style.transform = `scale(${s})`;
+    return;
+  }
+  // قبل التحميل (أو cross-origin): نعرض الموك أب كاملًا موسّطًا (الفورم ظاهر).
+  const scale = Math.min(stage.clientWidth / MOCK_W, stage.clientHeight / MOCK_H, 1);
+  scaler.style.left = '50%';
+  scaler.style.top = '50%';
+  scaler.style.transformOrigin = 'center center';
+  scaler.style.transform = `translate(-50%, -50%) scale(${scale})`;
+}
+
+// إعادة الملاءمة عدة مرات بعد تشغيل المعاينة (لالتقاط لحظة تحميل المتجر والتكبير).
+function refitAfterLoad() {
+  [600, 1500, 3000, 6000].forEach((ms) => setTimeout(() => {
+    if (document.body.classList.contains('browse-active')) fitMockupFrame();
+  }, ms));
 }
 window.addEventListener('resize', () => {
   if (document.body.classList.contains('browse-active')) fitMockupFrame();
@@ -624,8 +666,24 @@ function ensureMockupLoaded() {
   els.mockupFrame.dataset.loaded = '1';
   els.mockupFrame.onload = () => {
     mockupMsg('');
+    hookMockupPreviewButton();
     prefillMockupStore();
   };
+}
+
+// يربط زر "معاينة التطبيق" داخل الموك أب بإعادة الملاءمة (للتكبير عند التحميل).
+function hookMockupPreviewButton() {
+  try {
+    const doc = els.mockupFrame.contentDocument;
+    if (!doc) return;
+    const btn = [...doc.querySelectorAll('button')].find((b) => /معاينة التطبيق/.test(b.textContent || ''));
+    if (btn && !btn.dataset.refitHooked) {
+      btn.dataset.refitHooked = '1';
+      btn.addEventListener('click', refitAfterLoad);
+    }
+  } catch (e) {
+    /* cross-origin */
+  }
 }
 
 // يحاول وضع رابط المتجر في خانة الأداة الرسمية وتشغيل المعاينة (same-origin فقط).
@@ -638,7 +696,7 @@ function prefillMockupStore() {
     if (input && !input.value) {
       input.value = url;
       const btn = doc.getElementById('previewBtn') || doc.querySelector('button[type="submit"], .button--primary');
-      if (btn) btn.click();
+      if (btn) { btn.click(); refitAfterLoad(); }
     }
   } catch (e) {
     // cross-origin (تشغيل محلي): المستخدم يكتب الرابط داخل الأداة يدويًا
@@ -711,20 +769,22 @@ els.captureMockupBtn.addEventListener('click', async () => {
     mockupHint('متصفحك لا يدعم التقاط الشاشة — خذ سكرينشوت يدويًا والصقه بـ Ctrl+V.');
     return;
   }
-  // نلتقط بالحجم المعروض كما هو — بلا تكبير (التكبير يسبّب قفزة مفاجئة وصورة مغبّشة).
+  // نطلب أعلى دقة. ملاحظة مهمة: مشاركة "تبويب" تلتقط بالدقة المنطقية (CSS) فينتج
+  // أنعم؛ مشاركة "الشاشة/النافذة" تلتقط بالدقة الفيزيائية (أحدّ بمقدار DPR).
+  // فلا نفرض preferCurrentTab — نترك المستخدم يختار (الأحدّ = شاشة كاملة).
   let stream;
   try {
     stream = await navigator.mediaDevices.getDisplayMedia({
-      video: { displaySurface: 'browser' },
-      preferCurrentTab: true,       // Chrome: مشاركة التبويب الحالي بنقرة واحدة
-      selfBrowserSurface: 'include',
+      video: { width: { ideal: 3840 }, height: { ideal: 2160 }, frameRate: { ideal: 5 } },
       audio: false,
     });
   } catch (e) {
-    mockupHint('أُلغي الالتقاط (لازم توافق على مشاركة التبويب).');
+    mockupHint('أُلغي الالتقاط (لازم توافق على المشاركة).');
     return;
   }
   try {
+    const track = stream.getVideoTracks()[0];
+    const surface = track && track.getSettings ? track.getSettings().displaySurface : undefined;
     const video = document.createElement('video');
     video.srcObject = stream;
     video.muted = true;
@@ -738,8 +798,10 @@ els.captureMockupBtn.addEventListener('click', async () => {
     const sx = full.width / document.documentElement.clientWidth;
     const sy = full.height / document.documentElement.clientHeight;
 
-    // same-origin (نفس نطاق الموك أب): نعرف موضع الشاشة بدقة → قص تلقائي بلا تدخّل.
-    const precise = preciseScreenRect();
+    // مشاركة تبويب (browser) → القص التلقائي صحيح لأن الإطار = التبويب نفسه.
+    // مشاركة شاشة/نافذة → لا نعرف موضع التبويب داخلها، فنفتح أداة القص اليدوية
+    //   (وهي الخيار الأحدّ دقةً — ننصح بها).
+    const precise = surface === 'browser' ? preciseScreenRect() : null;
     if (precise) {
       const c = document.createElement('canvas');
       c.width = Math.max(1, Math.round(precise.width * sx));
@@ -752,10 +814,11 @@ els.captureMockupBtn.addEventListener('click', async () => {
       const img = await loadImage(c.toDataURL('image/png'));
       addMockupShot(img);
       showTab('design');
+      mockupHint(`أُضيفت — الدقة ${c.width}×${c.height}px. للأحدّ: شارك "الشاشة الكاملة" بدل التبويب.`);
       return;
     }
 
-    // نطاق مختلف (cross-origin): مربع افتراضي على الجوال ثم يضبطه المستخدم.
+    // شاشة/نافذة (أو نطاق مختلف): أداة القص — يسحب المستخدم مربعًا حول الجوال.
     const rect = guessScreenRect();
     openCropOverlay(full, {
       x: rect.left * sx, y: rect.top * sy, w: rect.width * sx, h: rect.height * sy,
@@ -865,6 +928,7 @@ els.cropConfirmBtn.addEventListener('click', async () => {
   addMockupShot(img);
   // انتقل لتاب التصميم ليرى النتيجة مركّبة فورًا (يعود للتصفّح لالتقاط المزيد)
   showTab('design');
+  mockupHint(`أُضيفت — الدقة ${c.width}×${c.height}px.`);
 });
 
 els.cropCancelBtn.addEventListener('click', () => {
