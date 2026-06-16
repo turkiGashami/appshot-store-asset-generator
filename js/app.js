@@ -625,10 +625,10 @@ function fitMockupFrame() {
   scaler.style.width = MOCK_W + 'px';
   scaler.style.height = MOCK_H + 'px';
 
-  // متجر محمّل (same-origin): نكبّر الجوال ليملأ المنطقة → أقصى دقة ممكنة، ثابتة.
+  // متجر محمّل (same-origin): نكبّر الجوال بحجم معتدل (يملأ ~80% مع هامش مريح).
   const phone = innerPhoneRect();
   if (phone) {
-    const s = Math.min((stage.clientHeight * 0.98) / phone.h, (stage.clientWidth * 0.98) / phone.w);
+    const s = Math.min((stage.clientHeight * 0.82) / phone.h, (stage.clientWidth * 0.82) / phone.w);
     const cx = phone.x + phone.w / 2;
     const cy = phone.y + phone.h / 2;
     scaler.style.transformOrigin = `${cx}px ${cy}px`;
@@ -769,17 +769,18 @@ els.captureMockupBtn.addEventListener('click', async () => {
     mockupHint('متصفحك لا يدعم التقاط الشاشة — خذ سكرينشوت يدويًا والصقه بـ Ctrl+V.');
     return;
   }
-  // نطلب أعلى دقة. ملاحظة مهمة: مشاركة "تبويب" تلتقط بالدقة المنطقية (CSS) فينتج
-  // أنعم؛ مشاركة "الشاشة/النافذة" تلتقط بالدقة الفيزيائية (أحدّ بمقدار DPR).
-  // فلا نفرض preferCurrentTab — نترك المستخدم يختار (الأحدّ = شاشة كاملة).
+  // مشاركة "هذا التبويب" بنقرة واحدة (أبسط حوار، بلا قائمة Tab/Window/Screen).
+  // getDisplayMedia هو الـ API الوحيد المتاح في المتصفح لالتقاط البكسلات.
   let stream;
   try {
     stream = await navigator.mediaDevices.getDisplayMedia({
-      video: { width: { ideal: 3840 }, height: { ideal: 2160 }, frameRate: { ideal: 5 } },
+      video: { displaySurface: 'browser', width: { ideal: 3840 }, height: { ideal: 2160 } },
+      preferCurrentTab: true,
+      selfBrowserSurface: 'include',
       audio: false,
     });
   } catch (e) {
-    mockupHint('أُلغي الالتقاط (لازم توافق على المشاركة).');
+    mockupHint('أُلغي الالتقاط (لازم توافق على مشاركة التبويب).');
     return;
   }
   try {
@@ -814,7 +815,7 @@ els.captureMockupBtn.addEventListener('click', async () => {
       const img = await loadImage(c.toDataURL('image/png'));
       addMockupShot(img);
       showTab('design');
-      mockupHint(`أُضيفت — الدقة ${c.width}×${c.height}px. للأحدّ: شارك "الشاشة الكاملة" بدل التبويب.`);
+      mockupHint(`أُضيفت الشاشة — الدقة ${c.width}×${c.height}px.`);
       return;
     }
 
