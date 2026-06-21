@@ -613,3 +613,37 @@ body.browse-active .stage { padding: 12px; }
   padding: 3px 9px;
   margin-inline-start: 6px;
 }
+
+/* ---------- Identity colors (primary + secondary) ---------- */
+.identity-colors { display: flex; gap: 10px; }
+.idcolor {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  font-size: 13px;
+}
+.idcolor__dot {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  flex: none;
+}
+.idcolor__name { color: var(--text); font-weight: 600; }
+.idcolor input[type="color"] {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}

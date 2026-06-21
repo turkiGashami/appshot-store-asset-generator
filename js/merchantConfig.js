@@ -97,6 +97,7 @@ export function buildExportConfig(current, lastImported) {
     brand: {
       ...(base.brand || {}),
       primaryColor: current.primaryColor,
+      ...(current.secondaryColor ? { secondaryColor: current.secondaryColor } : {}),
     },
     assetGenerator: {
       ...(base.assetGenerator || {}),

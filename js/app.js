@@ -103,6 +103,7 @@ const state = {
   iconCustomColor: '#6F008A',
   bgGradient: true,         // خلفية اللون المخصص: تدرّج أو لون صلب (من إعداد التاجر)
   brandPalette: [],         // ألوان الهوية (من المتجر/الاستيراد) — تظهر كحبّات جاهزة قابلة للتعديل
+  secondaryColor: null,     // اللون الفرعي للهوية (تدرّج الخلفية: أساسي → فرعي)
   appName: '',              // اسم التطبيق من إعداد التاجر المستورد
   lastImported: null,       // آخر merchant config مستورد (للحفاظ على round-trip كامل)
   selected: new Set(PRESETS.filter((p) => p.defaultOn).map((p) => p.id)),
@@ -153,6 +154,7 @@ function saveSession() {
       lastImported: state.lastImported,
       logoDataURL: state.logoDataURL || null,
       brandPalette: state.brandPalette,
+      secondaryColor: state.secondaryColor,
     }));
   } catch (e) {
     /* امتلاء localStorage — نتجاهل، الجلسة الحالية لا تتأثر */
@@ -184,6 +186,7 @@ async function restoreSession() {
   state.appName = s.appName || '';
   state.lastImported = s.lastImported || null;
   if (Array.isArray(s.brandPalette)) state.brandPalette = s.brandPalette;
+  if (s.secondaryColor) state.secondaryColor = s.secondaryColor;
   if (s.logoDataURL) {
     try { setLogo(await loadImage(s.logoDataURL)); } catch (e) { /* شعار تالف — نتجاهله */ }
   }
@@ -228,6 +231,10 @@ const els = {
   titleInput: $('titleInput'),
   themeSwatches: $('themeSwatches'),
   iconThemeSwatches: $('iconThemeSwatches'),
+  primaryColorInput: $('primaryColorInput'),
+  secondaryColorInput: $('secondaryColorInput'),
+  primarySwatch: $('primarySwatch'),
+  secondarySwatch: $('secondarySwatch'),
   layoutChips: $('layoutChips'),
   bgBaseChips: $('bgBaseChips'),
   bgDecorChips: $('bgDecorChips'),
@@ -461,14 +468,15 @@ function syncControls() {
   });
   buildLayouts();
   buildBgStyles();
+  syncIdentityColors();
 }
 
 // يحلّ ثيم الصورة الوصفية (مع دعم اللون المخصص).
 function shotTheme(t) {
-  return t.themeId === 'custom' ? makeCustomTheme(t.customColor, state.bgGradient) : themeById(t.themeId);
+  return t.themeId === 'custom' ? makeCustomTheme(t.customColor, state.bgGradient, state.secondaryColor) : themeById(t.themeId);
 }
 function iconTheme() {
-  return state.iconThemeId === 'custom' ? makeCustomTheme(state.iconCustomColor, state.bgGradient) : themeById(state.iconThemeId);
+  return state.iconThemeId === 'custom' ? makeCustomTheme(state.iconCustomColor, state.bgGradient, state.secondaryColor) : themeById(state.iconThemeId);
 }
 
 // ---------- المعاينة ----------
@@ -1029,6 +1037,49 @@ function setBrandPalette(primary, extras = []) {
   state.brandPalette = [...new Set(all)].slice(0, 5);
 }
 
+// ---------- ألوان الهوية: أساسي + فرعي ----------
+// اللون الأساسي = لون البراند الرئيسي (خلفيات كل الصور والأيقونة).
+function currentPrimary() {
+  const d = state.defaults;
+  return d.themeId === 'custom' ? d.customColor : themeById(d.themeId).swatch;
+}
+
+function applyPrimaryColor(hex) {
+  state.defaults.themeId = 'custom';
+  state.defaults.customColor = hex;
+  state.shots.forEach((s) => { s.themeId = 'custom'; s.customColor = hex; });
+  state.iconThemeId = 'custom';
+  state.iconCustomColor = hex;
+  setBrandPalette(hex, state.secondaryColor ? [state.secondaryColor] : []);
+  syncControls();
+  rebuildIconSwatches();
+  renderPreview();
+}
+
+// اللون الفرعي = الطرف الثاني لتدرّج الخلفية (أساسي → فرعي).
+function applySecondaryColor(hex) {
+  state.secondaryColor = hex;
+  syncIdentityColors();
+  renderPreview();
+}
+
+// مزامنة منتقيي اللون والحبّتين مع الحالة.
+function syncIdentityColors() {
+  const primary = currentPrimary();
+  const secondary = state.secondaryColor || hexShade(primary, -0.2);
+  if (els.primaryColorInput) els.primaryColorInput.value = primary;
+  if (els.secondaryColorInput) els.secondaryColorInput.value = secondary;
+  if (els.primarySwatch) els.primarySwatch.style.background = primary;
+  if (els.secondarySwatch) els.secondarySwatch.style.background = secondary;
+}
+
+if (els.primaryColorInput) {
+  els.primaryColorInput.addEventListener('input', (e) => applyPrimaryColor(e.target.value));
+}
+if (els.secondaryColorInput) {
+  els.secondaryColorInput.addEventListener('input', (e) => applySecondaryColor(e.target.value));
+}
+
 // ---------- إعداد التاجر (استيراد/تصدير/presets) ----------
 // يطبّق merchant config (صيغة merchants/<id>.json المشتركة) على حالة الأداة.
 async function applyMerchantConfig(cfg) {
@@ -1039,6 +1090,7 @@ async function applyMerchantConfig(cfg) {
     state.shots.forEach((s) => { s.themeId = 'custom'; s.customColor = hex; });
     state.iconThemeId = 'custom';
     state.iconCustomColor = hex;
+    state.secondaryColor = cfg.brand.secondaryColor || hexShade(hex, -0.2);
     setBrandPalette(hex, cfg.brand.secondaryColor ? [cfg.brand.secondaryColor] : []);
   }
 
@@ -1093,6 +1145,7 @@ function currentToolSettings() {
   return {
     appName: state.appName,
     primaryColor: d.themeId === 'custom' ? d.customColor : themeById(d.themeId).swatch,
+    secondaryColor: state.secondaryColor || undefined,
     template: d.layoutId,
     statusBarCoverage: Math.round(state.statusBarRatio * 100),
     showDeviceFrame: state.showFrame,
@@ -1177,6 +1230,8 @@ els.fetchStoreBtn.addEventListener('click', async () => {
       state.shots.forEach((s) => { s.themeId = 'custom'; s.customColor = hex; });
       state.iconThemeId = 'custom';
       state.iconCustomColor = hex;
+      // اللون الفرعي من هوية المتجر إن وُجد، وإلا درجة أغمق من الأساسي.
+      state.secondaryColor = (extras && extras[0]) || hexShade(hex, -0.2);
       setBrandPalette(hex, extras);
     }
     // تحميل شعار المتجر (يبقى رفع لوجو آخر متاحًا ويستبدله)

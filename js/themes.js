@@ -47,11 +47,13 @@ export function themeById(id) {
   return THEMES.find((t) => t.id === id) || THEMES[0];
 }
 
-// يبني ثيمًا من لون مخصص يختاره المستخدم، مع حساب لون النص تلقائيًا حسب السطوع.
-export function makeCustomTheme(color, gradient = true) {
+// يبني ثيمًا من لون مخصص، مع حساب لون النص تلقائيًا حسب السطوع.
+// secondary اختياري: لون فرعي للتدرّج (أساسي → فرعي)؛ بدونه يُشتق درجة أغمق.
+export function makeCustomTheme(color, gradient = true, secondary = null) {
   const text = pickTextColor(color);
-  const bg = gradient ? { type: 'linear', angle: 135, stops: [color, shade(color, -0.18)] } : color;
-  return { id: 'custom', label: 'مخصص', bg, textColor: text, swatch: color };
+  const second = secondary || shade(color, -0.18);
+  const bg = gradient ? { type: 'linear', angle: 135, stops: [color, second] } : color;
+  return { id: 'custom', label: 'مخصص', bg, textColor: text, swatch: color, secondary: second };
 }
 
 // أبيض على الخلفية الداكنة، وداكن على الفاتحة.
