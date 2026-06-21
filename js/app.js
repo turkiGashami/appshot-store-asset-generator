@@ -602,7 +602,7 @@ function innerPhoneRect() {
   try {
     const doc = els.mockupFrame.contentDocument;
     if (!doc) return null;
-    const el = doc.getElementById('preview-iframe') || doc.querySelector('.phone__screen');
+    const el = doc.querySelector('.phone__screen') || doc.getElementById('preview-iframe');
     if (!el) return null;
     // نكبّر فقط بعد تحميل متجر فعلي (لا قبلها — يبقى الفورم ظاهرًا لإدخال الرابط).
     const appIframe = doc.getElementById('preview-iframe');
@@ -722,9 +722,10 @@ function preciseScreenRect() {
   try {
     const doc = els.mockupFrame.contentDocument;
     if (!doc) return null;
-    // #preview-iframe = محتوى المتجر فقط (تحت شريط الحالة) — قص نظيف بلا الشريط الأسود/notch.
-    const screen = doc.getElementById('preview-iframe') ||
-                   doc.querySelector('.phone__screen') ||
+    // .phone__screen = شاشة الجوال كاملةً (شريط الحالة بالساعة + المحتوى) — لقطة
+    // واقعية كاملة. شريط الحالة نظيف (خلفية بيضاء + ساعة)، فلا داعي لاستثنائه.
+    const screen = doc.querySelector('.phone__screen') ||
+                   doc.getElementById('preview-iframe') ||
                    doc.querySelector('.phone__frame') ||
                    doc.querySelector('.phone');
     if (!screen) return null;
