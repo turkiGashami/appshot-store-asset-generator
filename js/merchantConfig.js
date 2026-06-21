@@ -48,8 +48,8 @@ export function validateMerchantConfig(cfg) {
       }
       if (ag.statusBarCoverage !== undefined) {
         const v = ag.statusBarCoverage;
-        if (typeof v !== 'number' || v < 5 || v > 20) {
-          err('assetGenerator.statusBarCoverage', 'رقم بين 5 و 20 (نسبة مئوية)');
+        if (typeof v !== 'number' || v < 0 || v > 20) {
+          err('assetGenerator.statusBarCoverage', 'رقم بين 0 و 20 (نسبة مئوية)');
         }
       }
       if (ag.showDeviceFrame !== undefined && typeof ag.showDeviceFrame !== 'boolean') {

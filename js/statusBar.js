@@ -15,7 +15,8 @@
 export const DEFAULT_RATIO = { ios: 0.12, android: 0.085 };
 
 export function statusBarHeight(w, platform, ratio) {
-  const r = ratio || DEFAULT_RATIO[platform] || DEFAULT_RATIO.ios;
+  // نحترم 0 صراحةً (إخفاء كامل)؛ الافتراضي فقط عند عدم تمرير قيمة.
+  const r = typeof ratio === 'number' ? ratio : (DEFAULT_RATIO[platform] || DEFAULT_RATIO.ios);
   return Math.round(w * r);
 }
 
@@ -26,6 +27,7 @@ const CONTENT_BASE = { ios: 0.082, android: 0.072 };
 export function drawStatusBar(ctx, opts) {
   const { x, y, w, platform = 'ios', tint = 'dark', bgFill = '#ffffff', ratio } = opts;
   const h = statusBarHeight(w, platform, ratio); // ارتفاع التغطية (يغطّي الشريط الأصلي)
+  if (h <= 0) return; // 0% = إخفاء الشريط تمامًا (يظهر أعلى الصورة كما هو)
   const color = tint === 'light' ? '#ffffff' : '#000000';
 
   ctx.save();
