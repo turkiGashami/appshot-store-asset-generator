@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AppsBunches — مولّد الصور الوصفية للمتاجر</title>
-  <link rel="stylesheet" href="css/styles.css?v=10" />
+  <link rel="stylesheet" href="css/styles.css?v=11" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -99,9 +99,9 @@
         <small class="field__hint">ميلان وموضع الجوال — مستقلة عن نمط الخلفية ويمكن تغييرها لكل صورة.</small>
       </div>
 
-      <!-- ألوان الهوية: أساسي + فرعي (مقتبسة من لون المتجر، قابلة للتعديل) -->
+      <!-- ألوان الخلفية: أساسي + فرعي (مقتبسة من المتجر) + حبّات سريعة للأساسي -->
       <div class="field">
-        <span class="field__label">ألوان الهوية</span>
+        <span class="field__label">ألوان الخلفية (أساسي + فرعي)</span>
         <div class="identity-colors">
           <label class="idcolor">
             <span class="idcolor__dot" id="primarySwatch"></span>
@@ -114,13 +114,8 @@
             <input type="color" id="secondaryColorInput" />
           </label>
         </div>
-        <small class="field__hint">يُجلبان من لون المتجر — يُستخدمان في تدرّج الخلفية (أساسي ← فرعي).</small>
-      </div>
-
-      <!-- خلفية الصور الوصفية -->
-      <div class="field">
-        <span class="field__label">خلفية الصورة الوصفية</span>
         <div class="swatches" id="themeSwatches"></div>
+        <small class="field__hint">اللونان يحكمان كل أنماط الخلفية (تدرّج، قطري، إشعاعي…). الحبّات اختصارات سريعة للأساسي من الثيمات والمتجر.</small>
       </div>
 
       <!-- أساس الخلفية -->
@@ -207,7 +202,7 @@
     <div class="tabs" id="stageTabs">
       <button type="button" class="tabs__tab is-active" data-tab="design">🎨 تصميم الصورة</button>
       <button type="button" class="tabs__tab" data-tab="browse">📱 تصفّح المتجر والتقط</button>
-      <span id="buildTag" class="build-tag" title="إصدار الأداة">v10</span>
+      <span id="buildTag" class="build-tag" title="إصدار الأداة">v11</span>
     </div>
 
     <!-- تبويب: تصميم الصورة (المعاينة + المصغّرات) -->
@@ -259,7 +254,7 @@
   </div>
 
   <script src="lib/jszip.min.js"></script>
-  <script type="module" src="js/app.js?v=10"></script>
+  <script type="module" src="js/app.js?v=11"></script>
 </body>
 
 </html>

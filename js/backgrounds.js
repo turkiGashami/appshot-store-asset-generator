@@ -7,8 +7,17 @@
 import { resolveBackground, shade } from './themes.js';
 import { drawPattern } from './layouts.js';
 
-// اللون الأساس للاشتقاق (موجود على كل الثيمات بما فيها المخصصة).
+// اللون الأساسي (الهوية) واللون الفرعي — كل الأنماط تشتقّ منهما.
 const base = (theme) => theme.swatch;
+const sec = (theme) => theme.secondary || shade(theme.swatch, -0.18);
+
+// يحوّل لونًا (hex أو rgb()) إلى "r,g,b" للاستخدام داخل rgba().
+function rgbTriplet(color) {
+  if (color.startsWith('rgb')) return color.slice(color.indexOf('(') + 1, color.lastIndexOf(')')).split(',').slice(0, 3).join(',');
+  let h = color.replace('#', '');
+  if (h.length === 3) h = h.split('').map((c) => c + c).join('');
+  return `${parseInt(h.slice(0, 2), 16)},${parseInt(h.slice(2, 4), 16)},${parseInt(h.slice(4, 6), 16)}`;
+}
 
 // لون الزخارف فوق الخلفية: أبيض شفاف على الداكن، أسود شفاف على الفاتح.
 function deco(theme, alpha) {
@@ -41,8 +50,8 @@ export const BG_BASES = [
     label: 'رأسي',
     paint(ctx, theme, w, h) {
       const g = ctx.createLinearGradient(0, 0, 0, h);
-      g.addColorStop(0, shade(base(theme), 0.12));
-      g.addColorStop(1, shade(base(theme), -0.22));
+      g.addColorStop(0, base(theme));   // أساسي أعلى
+      g.addColorStop(1, sec(theme));    // فرعي أسفل
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
     },
@@ -52,8 +61,8 @@ export const BG_BASES = [
     label: 'إشعاعي',
     paint(ctx, theme, w, h) {
       const g = ctx.createRadialGradient(w / 2, h * 0.35, 0, w / 2, h * 0.35, Math.max(w, h) * 0.85);
-      g.addColorStop(0, shade(base(theme), 0.16));
-      g.addColorStop(1, shade(base(theme), -0.25));
+      g.addColorStop(0, base(theme));   // أساسي بالمركز
+      g.addColorStop(1, sec(theme));    // فرعي بالأطراف
       ctx.fillStyle = g;
       ctx.fillRect(0, 0, w, h);
     },
@@ -62,9 +71,9 @@ export const BG_BASES = [
     id: 'duo',
     label: 'قطري',
     paint(ctx, theme, w, h) {
-      ctx.fillStyle = base(theme);
+      ctx.fillStyle = base(theme);      // أساسي
       ctx.fillRect(0, 0, w, h);
-      ctx.fillStyle = shade(base(theme), -0.18);
+      ctx.fillStyle = sec(theme);       // فرعي (المثلث السفلي)
       ctx.beginPath();
       ctx.moveTo(0, h * 0.55);
       ctx.lineTo(w, h * 0.25);
@@ -80,17 +89,17 @@ export const BG_BASES = [
     paint(ctx, theme, w, h) {
       ctx.fillStyle = base(theme);
       ctx.fillRect(0, 0, w, h);
-      // بقع ضوئية ضبابية كبيرة (mesh gradient) بدرجات مشتقة من اللون
+      // بقع ضوئية ضبابية كبيرة: مزيج من الأساسي والفرعي
       const blobs = [
         [0.15, 0.1, 0.6, shade(base(theme), 0.25), 0.5],
-        [0.9, 0.35, 0.55, shade(base(theme), -0.3), 0.45],
-        [0.25, 0.9, 0.65, shade(base(theme), 0.15), 0.4],
-        [0.85, 0.95, 0.4, shade(base(theme), -0.2), 0.35],
+        [0.9, 0.35, 0.55, sec(theme), 0.5],
+        [0.25, 0.9, 0.65, sec(theme), 0.45],
+        [0.85, 0.95, 0.4, shade(base(theme), 0.15), 0.35],
       ];
       blobs.forEach(([fx, fy, fr, color, alpha]) => {
         const r = w * fr;
         const g = ctx.createRadialGradient(w * fx, h * fy, 0, w * fx, h * fy, r);
-        const rgb = color.startsWith('rgb') ? color.slice(4, -1) : color;
+        const rgb = rgbTriplet(color); // يدعم hex و rgb()
         g.addColorStop(0, `rgba(${rgb},${alpha})`);
         g.addColorStop(1, `rgba(${rgb},0)`);
         ctx.fillStyle = g;

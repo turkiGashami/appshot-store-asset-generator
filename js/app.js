@@ -472,11 +472,17 @@ function syncControls() {
 }
 
 // يحلّ ثيم الصورة الوصفية (مع دعم اللون المخصص).
+// اللون الأساسي لصورة = لونها المخصص أو لون الثيم المختار (حبّة سريعة).
+function primaryOf(t) {
+  return t.themeId === 'custom' ? t.customColor : themeById(t.themeId).swatch;
+}
+// كل صورة تُبنى من (أساسي + فرعي) → اللون الفرعي ينعكس على جميع الأنماط.
 function shotTheme(t) {
-  return t.themeId === 'custom' ? makeCustomTheme(t.customColor, state.bgGradient, state.secondaryColor) : themeById(t.themeId);
+  return makeCustomTheme(primaryOf(t), state.bgGradient, state.secondaryColor);
 }
 function iconTheme() {
-  return state.iconThemeId === 'custom' ? makeCustomTheme(state.iconCustomColor, state.bgGradient, state.secondaryColor) : themeById(state.iconThemeId);
+  const c = state.iconThemeId === 'custom' ? state.iconCustomColor : themeById(state.iconThemeId).swatch;
+  return makeCustomTheme(c, state.bgGradient, state.secondaryColor);
 }
 
 // ---------- المعاينة ----------
@@ -503,6 +509,7 @@ function configFor(preset) {
 
 async function renderPreview() {
   saveSession(); // كل تغيير يمر من هنا — أرخص نقطة حفظ تلقائي
+  syncIdentityColors(); // إبقاء منتقيي الأساسي/الفرعي متوافقين مع الصورة المحددة
   await ensureFontsReady();
   const preset = presetById(state.previewPresetId);
   const cfg = configFor(preset);
@@ -1040,8 +1047,7 @@ function setBrandPalette(primary, extras = []) {
 // ---------- ألوان الهوية: أساسي + فرعي ----------
 // اللون الأساسي = لون البراند الرئيسي (خلفيات كل الصور والأيقونة).
 function currentPrimary() {
-  const d = state.defaults;
-  return d.themeId === 'custom' ? d.customColor : themeById(d.themeId).swatch;
+  return primaryOf(activeTarget());
 }
 
 function applyPrimaryColor(hex) {
