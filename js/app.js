@@ -108,7 +108,7 @@ const state = {
   lastImported: null,       // آخر merchant config مستورد (للحفاظ على round-trip كامل)
   selected: new Set(PRESETS.filter((p) => p.defaultOn).map((p) => p.id)),
   previewShot: 0,
-  previewPresetId: PRESETS.find((p) => p.type === 'screenshot').id,
+  previewPresetId: (PRESETS.find((p) => p.id === 'apple-6.5') || PRESETS.find((p) => p.type === 'screenshot')).id,
 };
 
 // الهدف الذي تعدّله عناصر التحكم (الصورة المحددة، أو الإعدادات الافتراضية إن لم توجد صور).
@@ -482,7 +482,8 @@ function shotTheme(t) {
 }
 function iconTheme() {
   const c = state.iconThemeId === 'custom' ? state.iconCustomColor : themeById(state.iconThemeId).swatch;
-  return makeCustomTheme(c, state.bgGradient, state.secondaryColor);
+  // خلفية الأيقونة/الكفر سادة دائمًا (لا تدرّج).
+  return makeCustomTheme(c, false, null);
 }
 
 // ---------- المعاينة ----------
