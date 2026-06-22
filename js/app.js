@@ -99,6 +99,7 @@ const state = {
   statusBarRatio: 0.12,     // مشترك (تغطية شريط الحالة)
   showFrame: true,          // مشترك
   showHeaderLogo: false,    // إظهار شعار المتجر أعلى كل الصفحات
+  logoScale: 1,             // مقياس حجم الشعار (الرأسي + الأيقونة + الكفر)
   iconThemeId: 'purple',    // خلفية الأيقونات/الكفر (منفصلة عن الصور الوصفية)
   iconCustomColor: '#6F008A',
   bgGradient: true,         // خلفية اللون المخصص: تدرّج أو لون صلب (من إعداد التاجر)
@@ -147,6 +148,7 @@ function saveSession() {
       statusBarRatio: state.statusBarRatio,
       showFrame: state.showFrame,
       showHeaderLogo: state.showHeaderLogo,
+      logoScale: state.logoScale,
       iconThemeId: state.iconThemeId,
       iconCustomColor: state.iconCustomColor,
       bgGradient: state.bgGradient,
@@ -178,6 +180,7 @@ async function restoreSession() {
   if (!Array.isArray(state.defaults.bgDecors)) state.defaults.bgDecors = [];
   if (s.platform) state.platform = s.platform;
   if (typeof s.statusBarRatio === 'number') state.statusBarRatio = s.statusBarRatio;
+  if (typeof s.logoScale === 'number') state.logoScale = s.logoScale;
   if (typeof s.showFrame === 'boolean') state.showFrame = s.showFrame;
   if (typeof s.showHeaderLogo === 'boolean') state.showHeaderLogo = s.showHeaderLogo;
   if (s.iconThemeId) state.iconThemeId = s.iconThemeId;
@@ -252,6 +255,8 @@ const els = {
   cropCancelBtn: $('cropCancelBtn'),
   statusBarRange: $('statusBarRange'),
   statusBarVal: $('statusBarVal'),
+  logoScaleRange: $('logoScaleRange'),
+  logoScaleVal: $('logoScaleVal'),
   frameToggle: $('frameToggle'),
   presetsList: $('presetsList'),
   platformGroup: $('platformGroup'),
@@ -340,6 +345,21 @@ function buildLayouts() {
   });
 }
 
+// تصميم الخلفية (أساس + زخارف) من الصورة الأولى يُعكَس على كل الصور؛
+// التعديل على صورة غير الأولى يبقى محليًا عليها فقط.
+function editingFirst() {
+  return state.shots.length === 0 || state.previewShot === 0;
+}
+function propagateBackgroundFromFirst() {
+  const src = activeTarget();
+  state.defaults.bgBaseId = src.bgBaseId;
+  state.defaults.bgDecors = [...(src.bgDecors || [])];
+  state.shots.forEach((s) => {
+    s.bgBaseId = src.bgBaseId;
+    s.bgDecors = [...(src.bgDecors || [])];
+  });
+}
+
 function buildBgStyles() {
   // أساس الخلفية — اختيار واحد
   els.bgBaseChips.innerHTML = '';
@@ -350,6 +370,7 @@ function buildBgStyles() {
     b.textContent = s.label;
     b.addEventListener('click', () => {
       activeTarget().bgBaseId = s.id;
+      if (editingFirst()) propagateBackgroundFromFirst();
       buildBgStyles();
       renderPreview();
     });
@@ -370,6 +391,7 @@ function buildBgStyles() {
       cur.bgDecors = cur.bgDecors.includes(s.id)
         ? cur.bgDecors.filter((id) => id !== s.id)
         : [...cur.bgDecors, s.id];
+      if (editingFirst()) propagateBackgroundFromFirst();
       buildBgStyles();
       renderPreview();
     });
@@ -501,11 +523,12 @@ function configFor(preset) {
       showFrame: state.showFrame,
       showHeaderLogo: !!t.showLogo,
       logo: state.logo,
+      logoScale: state.logoScale,
       screenshot: state.shots[state.previewShot] ? state.shots[state.previewShot].img : null,
     };
   }
   // أيقونة / كفر
-  return { theme: iconTheme(), logo: state.logo };
+  return { theme: iconTheme(), logo: state.logo, logoScale: state.logoScale };
 }
 
 async function renderPreview() {
@@ -1008,6 +1031,12 @@ els.statusBarRange.addEventListener('input', (e) => {
   renderPreview();
 });
 
+els.logoScaleRange.addEventListener('input', (e) => {
+  state.logoScale = Number(e.target.value) / 100;
+  els.logoScaleVal.textContent = e.target.value + '%';
+  renderPreview();
+});
+
 els.frameToggle.addEventListener('change', (e) => {
   state.showFrame = e.target.checked;
   renderPreview();
@@ -1299,8 +1328,9 @@ els.exportBtn.addEventListener('click', async () => {
       statusBarRatio: state.statusBarRatio,
       showFrame: state.showFrame,
       logo: state.logo,
+      logoScale: state.logoScale,
     };
-    const iconConfig = { theme: iconTheme(), logo: state.logo };
+    const iconConfig = { theme: iconTheme(), logo: state.logo, logoScale: state.logoScale };
     await exportAll(shotsConfig, [...state.selected], globalConfig, iconConfig, (done, total) => {
       els.progress.hidden = false;
       els.progress.textContent = `جارٍ التصدير… ${done}/${total}`;
@@ -1339,5 +1369,7 @@ function rebuildIconSwatches() {
   updateLogoPreview();
   els.statusBarRange.value = Math.round(state.statusBarRatio * 100);
   els.statusBarVal.textContent = Math.round(state.statusBarRatio * 100) + '%';
+  els.logoScaleRange.value = Math.round(state.logoScale * 100);
+  els.logoScaleVal.textContent = Math.round(state.logoScale * 100) + '%';
   renderPreview();
 })();

@@ -3,13 +3,13 @@
 
 export function renderFeature(ctx, preset, config, helpers) {
   const { width, height } = preset;
-  const { logo, title, theme } = config;
+  const { logo, title, theme, logoScale = 1 } = config;
 
   helpers.paintBackground(ctx, theme, width, height);
 
   const hasTitle = !!title;
-  const logoMaxH = height * (hasTitle ? 0.4 : 0.55);
-  const logoMaxW = width * 0.6;
+  const logoMaxH = height * (hasTitle ? 0.4 : 0.55) * logoScale;
+  const logoMaxW = width * 0.6 * logoScale;
 
   let logoBottom = height / 2;
   if (logo) {

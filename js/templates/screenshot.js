@@ -11,7 +11,7 @@ export function renderScreenshot(ctx, preset, config, helpers) {
   const {
     screenshot, title, theme, platform = 'ios', showFrame = true,
     logo = null, statusBarRatio, layoutId = 'classic', showHeaderLogo = false,
-    bgBaseId = 'gradient', bgDecors = [],
+    bgBaseId = 'gradient', bgDecors = [], logoScale = 1,
   } = config;
   const layout = layoutById(layoutId);
 
@@ -23,9 +23,9 @@ export function renderScreenshot(ctx, preset, config, helpers) {
   if (showHeaderLogo && logo) {
     const lr = (logo.naturalWidth || logo.width) / (logo.naturalHeight || logo.height);
     // نحافظ على نسبة الشعار: نقيّد بالارتفاع وبالعرض معًا وننكمش بالنسبتين
-    let logoH = height * 0.09;
+    let logoH = height * 0.09 * logoScale;
     let logoW = logoH * lr;
-    const maxW = width * 0.5;
+    const maxW = width * 0.7;
     if (logoW > maxW) {
       logoW = maxW;
       logoH = logoW / lr;

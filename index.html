@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AppsBunches — مولّد الصور الوصفية للمتاجر</title>
-  <link rel="stylesheet" href="css/styles.css?v=12" />
+  <link rel="stylesheet" href="css/styles.css?v=13" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -170,6 +170,13 @@
         <span>إظهار الشعار على كل الصور (تطبيق جماعي)</span>
       </label>
 
+      <!-- حجم الشعار -->
+      <div class="field">
+        <span class="field__label">حجم الشعار <em id="logoScaleVal" class="range-val">100%</em></span>
+        <input type="range" id="logoScaleRange" min="40" max="250" step="5" value="100" />
+        <small class="field__hint">يكبّر/يصغّر الشعار في الصور والأيقونة والكفر.</small>
+      </div>
+
       <!-- خلفية الأيقونة والكفر (منفصلة) -->
       <div class="field">
         <span class="field__label">خلفية الأيقونة والكفر</span>
@@ -202,7 +209,7 @@
     <div class="tabs" id="stageTabs">
       <button type="button" class="tabs__tab is-active" data-tab="design">🎨 تصميم الصورة</button>
       <button type="button" class="tabs__tab" data-tab="browse">📱 تصفّح المتجر والتقط</button>
-      <span id="buildTag" class="build-tag" title="إصدار الأداة">v12</span>
+      <span id="buildTag" class="build-tag" title="إصدار الأداة">v13</span>
     </div>
 
     <!-- تبويب: تصميم الصورة (المعاينة + المصغّرات) -->
@@ -254,7 +261,7 @@
   </div>
 
   <script src="lib/jszip.min.js"></script>
-  <script type="module" src="js/app.js?v=12"></script>
+  <script type="module" src="js/app.js?v=13"></script>
 </body>
 
 </html>

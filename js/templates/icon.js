@@ -2,16 +2,16 @@
 
 export function renderIcon(ctx, preset, config, helpers) {
   const { width, height } = preset;
-  const { logo, theme } = config;
+  const { logo, theme, logoScale = 1 } = config;
 
   helpers.paintBackground(ctx, theme, width, height);
 
   if (!logo) return;
 
-  // هامش الأيقونة ~ 18% من كل جهة
+  // هامش الأيقونة ~ 18% من كل جهة (يتغيّر بمقياس الشعار)
   const pad = width * 0.18;
-  const boxW = width - pad * 2;
-  const boxH = height - pad * 2;
+  const boxW = (width - pad * 2) * logoScale;
+  const boxH = (height - pad * 2) * logoScale;
 
   const iw = logo.naturalWidth || logo.width;
   const ih = logo.naturalHeight || logo.height;
