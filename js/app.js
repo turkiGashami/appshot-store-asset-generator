@@ -93,7 +93,7 @@ function loadImageCors(src) {
 // كل سكرينشوت له إعداداته الخاصة (عنوان/ثيم/تخطيط) ليختلف عن بقية الصفحات.
 const state = {
   shots: [], // [{ name, img, title, themeId, layoutId, customColor }]
-  defaults: { title: '', themeId: 'brown', layoutId: LAYOUTS[0].id, customColor: '#6F008A', bgBaseId: 'gradient', bgDecors: [], showLogo: false },
+  defaults: { title: '', themeId: 'brown', layoutId: LAYOUTS[0].id, customColor: '#6F008A', bgBaseId: 'gradient', bgDecors: [], showLogo: false, inheritFirst: true },
   logo: null,
   platform: 'ios',          // مشترك للدفعة
   statusBarRatio: 0.12,     // مشترك (تغطية شريط الحالة)
@@ -242,6 +242,8 @@ const els = {
   bgBaseChips: $('bgBaseChips'),
   bgDecorChips: $('bgDecorChips'),
   shotLogoToggle: $('shotLogoToggle'),
+  inheritFirstRow: $('inheritFirstRow'),
+  inheritFirstToggle: $('inheritFirstToggle'),
   openMockupBtn: $('openMockupBtn'),
   stageTabs: $('stageTabs'),
   mockupFrame: $('mockupFrame'),
@@ -345,33 +347,56 @@ function buildLayouts() {
   });
 }
 
-// تصميم الخلفية (أساس + زخارف) من الصورة الأولى يُعكَس على كل الصور؛
-// التعديل على صورة غير الأولى يبقى محليًا عليها فقط.
-function editingFirst() {
-  return state.shots.length === 0 || state.previewShot === 0;
+// وراثة ديناميكية: صورة غير الأولى مفعّل لها "جلب تخصيصات الأولى" تقرأ تصميم
+// خلفية الصورة الأولى مباشرةً (أساس + زخارف). إلغاء التفعيل أو التعديل = تخصيص مستقل.
+function inheritsFromFirst(t) {
+  return state.shots.length > 1 && state.shots.indexOf(t) > 0 && !!t.inheritFirst;
 }
-function propagateBackgroundFromFirst() {
-  const src = activeTarget();
-  state.defaults.bgBaseId = src.bgBaseId;
-  state.defaults.bgDecors = [...(src.bgDecors || [])];
-  state.shots.forEach((s) => {
-    s.bgBaseId = src.bgBaseId;
-    s.bgDecors = [...(src.bgDecors || [])];
-  });
+function resolvedBase(t) {
+  return inheritsFromFirst(t) ? state.shots[0].bgBaseId : t.bgBaseId;
+}
+function resolvedDecors(t) {
+  return (inheritsFromFirst(t) ? state.shots[0].bgDecors : t.bgDecors) || [];
 }
 
+// يُظهر مفتاح "جلب تصميم الأولى" للصور غير الأولى فقط، ويزامن حالته.
+function syncInheritToggle() {
+  const t = activeTarget();
+  const isNonFirst = state.shots.length > 1 && state.shots.indexOf(t) > 0;
+  els.inheritFirstRow.hidden = !isNonFirst;
+  if (isNonFirst) els.inheritFirstToggle.checked = !!t.inheritFirst;
+}
+
+els.inheritFirstToggle.addEventListener('change', (e) => {
+  const t = activeTarget();
+  if (state.shots.indexOf(t) <= 0) return;
+  // عند الإلغاء: ثبّت التصميم الموروث الحالي قبل قطع الوراثة (نقرأ resolved أولًا).
+  if (!e.target.checked) {
+    t.bgBaseId = resolvedBase(t);
+    t.bgDecors = [...resolvedDecors(t)];
+  }
+  t.inheritFirst = e.target.checked;
+  buildBgStyles();
+  renderPreview();
+});
+
 function buildBgStyles() {
+  const t = activeTarget();
+  const activeBase = resolvedBase(t);
+  const activeDecors = resolvedDecors(t);
   // أساس الخلفية — اختيار واحد
   els.bgBaseChips.innerHTML = '';
   BG_BASES.forEach((s) => {
     const b = document.createElement('button');
     b.type = 'button';
-    b.className = 'chip' + (s.id === activeTarget().bgBaseId ? ' is-active' : '');
+    b.className = 'chip' + (s.id === activeBase ? ' is-active' : '');
     b.textContent = s.label;
     b.addEventListener('click', () => {
-      activeTarget().bgBaseId = s.id;
-      if (editingFirst()) propagateBackgroundFromFirst();
+      const cur = activeTarget();
+      if (state.shots.indexOf(cur) > 0) cur.inheritFirst = false; // تعديل غير الأولى = مستقل
+      cur.bgBaseId = s.id;
       buildBgStyles();
+      syncInheritToggle();
       renderPreview();
     });
     els.bgBaseChips.appendChild(b);
@@ -379,20 +404,18 @@ function buildBgStyles() {
   // الزخارف — تبديل متعدد (يمكن دمج أكثر من زخرفة)
   els.bgDecorChips.innerHTML = '';
   BG_DECORS.forEach((s) => {
-    const t = activeTarget();
-    if (!Array.isArray(t.bgDecors)) t.bgDecors = [];
-    const on = t.bgDecors.includes(s.id);
+    const on = activeDecors.includes(s.id);
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'chip' + (on ? ' is-active' : '');
     b.textContent = s.label;
     b.addEventListener('click', () => {
       const cur = activeTarget();
-      cur.bgDecors = cur.bgDecors.includes(s.id)
-        ? cur.bgDecors.filter((id) => id !== s.id)
-        : [...cur.bgDecors, s.id];
-      if (editingFirst()) propagateBackgroundFromFirst();
+      if (state.shots.indexOf(cur) > 0) cur.inheritFirst = false; // تعديل غير الأولى = مستقل
+      const decs = resolvedDecors(cur);
+      cur.bgDecors = decs.includes(s.id) ? decs.filter((id) => id !== s.id) : [...decs, s.id];
       buildBgStyles();
+      syncInheritToggle();
       renderPreview();
     });
     els.bgDecorChips.appendChild(b);
@@ -491,6 +514,7 @@ function syncControls() {
   buildLayouts();
   buildBgStyles();
   syncIdentityColors();
+  syncInheritToggle();
 }
 
 // يحلّ ثيم الصورة الوصفية (مع دعم اللون المخصص).
@@ -516,8 +540,8 @@ function configFor(preset) {
       title: t.title,
       theme: shotTheme(t),
       layoutId: t.layoutId,
-      bgBaseId: t.bgBaseId,
-      bgDecors: t.bgDecors || [],
+      bgBaseId: resolvedBase(t),
+      bgDecors: resolvedDecors(t),
       platform: state.platform,
       statusBarRatio: state.statusBarRatio,
       showFrame: state.showFrame,
@@ -1319,8 +1343,8 @@ els.exportBtn.addEventListener('click', async () => {
       title: s.title,
       theme: shotTheme(s),
       layoutId: s.layoutId,
-      bgBaseId: s.bgBaseId,
-      bgDecors: s.bgDecors || [],
+      bgBaseId: resolvedBase(s),
+      bgDecors: resolvedDecors(s),
       showHeaderLogo: !!s.showLogo,
     }));
     const globalConfig = {

@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>AppsBunches — مولّد الصور الوصفية للمتاجر</title>
-  <link rel="stylesheet" href="css/styles.css?v=13" />
+  <link rel="stylesheet" href="css/styles.css?v=14" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700&display=swap" rel="stylesheet" />
@@ -85,6 +85,12 @@
 
       <!-- إعدادات الصورة المحددة (لكل سكرينشوت تصميم خاص) -->
       <div class="section-head">إعدادات الصورة المحددة</div>
+
+      <!-- جلب تخصيصات الصورة الأولى (يظهر للصور غير الأولى) -->
+      <label class="toggle" id="inheritFirstRow" hidden>
+        <input type="checkbox" id="inheritFirstToggle" checked />
+        <span>اجلب تصميم خلفية الصورة الأولى</span>
+      </label>
 
       <!-- العنوان -->
       <label class="field">
@@ -209,7 +215,7 @@
     <div class="tabs" id="stageTabs">
       <button type="button" class="tabs__tab is-active" data-tab="design">🎨 تصميم الصورة</button>
       <button type="button" class="tabs__tab" data-tab="browse">📱 تصفّح المتجر والتقط</button>
-      <span id="buildTag" class="build-tag" title="إصدار الأداة">v13</span>
+      <span id="buildTag" class="build-tag" title="إصدار الأداة">v14</span>
     </div>
 
     <!-- تبويب: تصميم الصورة (المعاينة + المصغّرات) -->
@@ -261,7 +267,7 @@
   </div>
 
   <script src="lib/jszip.min.js"></script>
-  <script type="module" src="js/app.js?v=13"></script>
+  <script type="module" src="js/app.js?v=14"></script>
 </body>
 
 </html>
